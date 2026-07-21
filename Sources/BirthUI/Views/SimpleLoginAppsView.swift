@@ -18,9 +18,9 @@ struct SimpleLoginAppsView: View {
             } else if state.loginApps.isEmpty && state.isLoadingLoginApps {
                 ProgressView("正在读取登录项…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if state.loginApps.isEmpty {
+            } else if state.loginApps.isEmpty && state.appLikeAgents.isEmpty {
                 emptyState
-            } else if state.visibleLoginApps.isEmpty {
+            } else if state.visibleLoginApps.isEmpty && state.visibleAppLikeAgents.isEmpty {
                 ContentUnavailableView(
                     "无匹配结果",
                     systemImage: "magnifyingglass",
@@ -31,7 +31,7 @@ struct SimpleLoginAppsView: View {
             }
         }
         .navigationTitle("启动应用")
-        .navigationSubtitle("共 \(state.visibleLoginApps.count) 项")
+        .navigationSubtitle("共 \(state.visibleLoginApps.count + state.visibleAppLikeAgents.count) 项")
         .searchable(text: $state.loginSearchText, placement: .toolbar, prompt: "名称、开发者或路径")
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -75,15 +75,35 @@ struct SimpleLoginAppsView: View {
 
     private var appList: some View {
         List {
-            Section {
-                ForEach(state.visibleLoginApps) { app in
-                    LoginAppRow(app: app)
+            if !state.visibleLoginApps.isEmpty {
+                Section {
+                    ForEach(state.visibleLoginApps) { app in
+                        LoginAppRow(app: app)
+                    }
+                } header: {
+                    if !state.visibleAppLikeAgents.isEmpty {
+                        Text("登录时打开")
+                    }
+                } footer: {
+                    Text("这些 App 会在你登录 Mac 时自动打开。在这里移除也会同步从系统设置中移除——App 本身仍保留在磁盘上，可随时在侧边栏“最近移除”中重新启用。也可以直接把 App 拖进这个窗口来添加。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 6)
                 }
-            } footer: {
-                Text("这些 App 会在你登录 Mac 时自动打开。在这里移除也会同步从系统设置中移除——App 本身仍保留在磁盘上，可随时在侧边栏“最近移除”中重新启用。也可以直接把 App 拖进这个窗口来添加。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 6)
+            }
+            if !state.visibleAppLikeAgents.isEmpty {
+                Section {
+                    ForEach(state.visibleAppLikeAgents) { item in
+                        AgentAppRow(item: item)
+                    }
+                } header: {
+                    Text("其他方式自启")
+                } footer: {
+                    Text("这些 App 通过自带的后台项（LaunchAgent）在登录时自动打开——通常来自 App 内的“开机启动”设置。关闭开关即停止自启（无需密码）；右键可查看详情或彻底移除。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 6)
+                }
             }
         }
         .listStyle(.inset)
@@ -224,6 +244,83 @@ private struct LoginAppRow: View {
     private func showRelatedInAdvanced() {
         state.searchText = app.name
         state.selection = .all
+    }
+}
+
+/// A launch agent that opens a real app at login — icon and name come
+/// from the .app it launches; the switch is the item's launchd
+/// enablement (user-session domains, so no password).
+private struct AgentAppRow: View {
+    private var state: AppState { .shared }
+    let item: LaunchItem
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(nsImage: AppIconCache.icon(forPath: item.launchedAppBundlePath ?? ""))
+                .resizable()
+                .frame(width: 36, height: 36)
+                .opacity(item.enablement.isEnabled == false ? 0.55 : 1)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.launchedAppName ?? item.displayName)
+                    .font(.body.weight(.medium))
+                HStack(spacing: 3) {
+                    if let signature = state.signature(for: item), !signature.isTrustworthy {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.caption)
+                    }
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            if state.busyItemIDs.contains(item.id) {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: { item.enablement.isEnabled ?? false },
+                        set: { state.setEnabled($0, item: item) }
+                    )
+                )
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .help("关闭后不再于登录时自动打开（无需密码）")
+            }
+        }
+        .padding(.vertical, 4)
+        .contextMenu {
+            if let bundle = item.launchedAppBundlePath {
+                Button("在访达中显示") {
+                    state.revealInFinder(URL(filePath: bundle))
+                }
+            }
+            Button("在高级启动项中查看") {
+                state.searchText = item.launchedAppName ?? item.displayName
+                state.selection = .all
+            }
+            if item.isUserRemovable {
+                Divider()
+                Button("移除…", role: .destructive) {
+                    state.itemPendingRemoval = item
+                }
+            }
+        }
+    }
+
+    private var subtitle: String {
+        let mechanism = item.domain == .userAgent ? "用户后台项" : "全局后台项"
+        if let signature = state.signature(for: item) {
+            return signature.shortDescription + " · " + mechanism
+        }
+        return mechanism
     }
 }
 

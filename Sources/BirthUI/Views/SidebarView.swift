@@ -19,6 +19,18 @@ struct SidebarView: View {
                 }
             }
         }
+        .safeAreaInset(edge: .top) {
+            // Brand header: with Finder-style window titles (title = where
+            // you are), this is where the product identity lives.
+            HStack {
+                Text(BirthInfo.name)
+                    .font(.title2.weight(.semibold))
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+            .padding(.bottom, 4)
+        }
         .safeAreaInset(edge: .bottom) {
             if state.loginItemsError != nil {
                 FullDiskAccessHint()

@@ -163,3 +163,61 @@ struct AppStateTests {
         #expect(revived.restorableRemovedLoginApps == [calc])
     }
 }
+
+@MainActor
+@Suite("Launched-app agent detection")
+struct LaunchedAppAgentTests {
+    private func agent(
+        path: String?,
+        domain: LaunchItem.Domain = .userAgent,
+        runAtLoad: Bool = true,
+        keepAlive: Bool = false
+    ) -> LaunchItem {
+        LaunchItem(
+            id: "t", label: "t", displayName: "t", domain: domain,
+            executablePath: path, runAtLoad: runAtLoad, keepAlive: keepAlive
+        )
+    }
+
+    /// The 闪电说 shape: a user agent whose executable is the main binary
+    /// of an app in /Applications.
+    @Test func detectsDIYOpenAtLoginAgents() {
+        let item = agent(path: "/Applications/闪电说.app/Contents/MacOS/shandianshuo")
+        #expect(item.launchedAppBundlePath == "/Applications/闪电说.app")
+        #expect(item.launchedAppName == "闪电说")
+    }
+
+    @Test func keepAliveCountsAsLaunching() {
+        let item = agent(path: "/Applications/X.app/Contents/MacOS/X", runAtLoad: false, keepAlive: true)
+        #expect(item.launchedAppBundlePath != nil)
+    }
+
+    @Test func rejectsNonAppShapes() {
+        // Embedded login-item helper (double bundle).
+        #expect(agent(path: "/Applications/Lemon.app/Contents/Library/LoginItems/M.app/Contents/MacOS/M").launchedAppBundlePath == nil)
+        // Non-main binaries inside the bundle.
+        #expect(agent(path: "/Applications/S.app/Contents/Resources/monitor").launchedAppBundlePath == nil)
+        #expect(agent(path: "/Applications/B.app/Contents/Frameworks/service").launchedAppBundlePath == nil)
+        // Updater bundles living in Application Support.
+        #expect(agent(path: NSHomeDirectory() + "/Library/Application Support/G/U.app/Contents/MacOS/U").launchedAppBundlePath == nil)
+        // Subdirectory under MacOS.
+        #expect(agent(path: "/Applications/A.app/Contents/MacOS/sub/bin").launchedAppBundlePath == nil)
+        // Daemons and not-at-boot jobs are out of scope.
+        #expect(agent(path: "/Applications/D.app/Contents/MacOS/D", domain: .globalDaemon).launchedAppBundlePath == nil)
+        #expect(agent(path: "/Applications/N.app/Contents/MacOS/N", runAtLoad: false).launchedAppBundlePath == nil)
+        // No executable at all.
+        #expect(agent(path: nil).launchedAppBundlePath == nil)
+    }
+
+    @Test func aggregatedSidebarCountIncludesAgents() {
+        let box = StateBox()
+        defer { box.cleanUp() }
+        box.state.loginApps = [LoginApp(name: "Paste", path: "/Applications/Paste.app")]
+        box.state.items = [
+            agent(path: "/Applications/闪电说.app/Contents/MacOS/shandianshuo"),
+            agent(path: "/Applications/S.app/Contents/Resources/monitor"),
+        ]
+        #expect(box.state.count(for: .loginApps) == 2)
+        #expect(box.state.appLikeAgents.count == 1)
+    }
+}

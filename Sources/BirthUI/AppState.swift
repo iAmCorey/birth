@@ -187,7 +187,7 @@ final class AppState {
 
     func count(for section: SidebarSection) -> Int {
         switch section {
-        case .loginApps: loginApps.count
+        case .loginApps: loginApps.count + appLikeAgents.count
         case .recentlyRemoved: restorableRemovedLoginApps.count
         case .all: items.filter { showAppleItems || !isAppleItem($0) }.count
         case .domain(let domain):
@@ -412,6 +412,25 @@ final class AppState {
         loginApps.filter { matchesLoginSearch($0) }
     }
 
+    /// Launch agents that open a real app at login (闪电说-style DIY
+    /// 开机启动) — surfaced in 启动应用 so "why does X auto-open" has a
+    /// one-page answer regardless of which mechanism the app picked.
+    var appLikeAgents: [LaunchItem] {
+        items.filter { $0.launchedAppBundlePath != nil }
+            .sorted { ($0.launchedAppName ?? $0.displayName) < ($1.launchedAppName ?? $1.displayName) }
+    }
+
+    var visibleAppLikeAgents: [LaunchItem] {
+        appLikeAgents.filter { item in
+            matches(query: loginSearchText, haystacks: [
+                item.launchedAppName ?? "",
+                item.displayName,
+                item.executablePath ?? "",
+                signature(for: item)?.developerName ?? "",
+            ])
+        }
+    }
+
     func clearRemovedLoginAppRecords() {
         recentlyRemovedLoginApps = []
     }
@@ -514,13 +533,51 @@ final class AppState {
     }
 }
 
+// MARK: - App-like launch agents
+
+extension LaunchItem {
+    /// The outermost .app bundle when this item is a launch agent whose
+    /// job is "open a real application at login" — the 闪电说 case: apps
+    /// that implement their own 开机启动 by dropping a RunAtLoad agent
+    /// pointing at their main binary. nil for daemons, disabled-at-boot
+    /// jobs, embedded helpers (Contents/Library/...), updaters living in
+    /// Application Support, and non-main binaries (Resources/Frameworks) —
+    /// those keep their home in the advanced view.
+    var launchedAppBundlePath: String? {
+        guard domain == .userAgent || domain == .globalAgent,
+              runAtLoad || keepAlive,
+              let path = executablePath,
+              let dotApp = path.range(of: ".app/")
+        else { return nil }
+        let bundle = String(path[..<dotApp.lowerBound]) + ".app"
+        // The executable must be directly in the bundle's Contents/MacOS —
+        // this single check also rejects every embedded-bundle shape
+        // (Contents/Library/LoginItems/X.app/...) and Resources/Frameworks
+        // binaries, because their prefix differs.
+        let mainBinaryDir = bundle + "/Contents/MacOS/"
+        guard path.hasPrefix(mainBinaryDir),
+              !path.dropFirst(mainBinaryDir.count).contains("/")
+        else { return nil }
+        // A user-facing app lives in /Applications (or ~/Applications);
+        // agents pointing into Application Support are infrastructure.
+        guard bundle.hasPrefix("/Applications/")
+            || bundle.hasPrefix(NSHomeDirectory() + "/Applications/")
+        else { return nil }
+        return bundle
+    }
+
+    var launchedAppName: String? {
+        launchedAppBundlePath.map { URL(filePath: $0).deletingPathExtension().lastPathComponent }
+    }
+}
+
 // MARK: - Display helpers
 
 extension LaunchItem.Domain {
     var displayName: String {
         switch self {
-        case .userAgent: "用户代理"
-        case .globalAgent: "全局代理"
+        case .userAgent: "用户后台项"
+        case .globalAgent: "全局后台项"
         case .globalDaemon: "守护进程"
         case .loginItem: "登录项"
         }

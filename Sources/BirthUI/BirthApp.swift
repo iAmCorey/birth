@@ -13,6 +13,12 @@ public struct BirthApp: App {
         }
         .defaultSize(width: 1040, height: 680)
         .commands {
+            // Custom About panel with the author credit (kooky-style).
+            CommandGroup(replacing: .appInfo) {
+                Button("关于 \(BirthInfo.name)") {
+                    AboutWindowController.shared.show()
+                }
+            }
             // Finder-style quick jumps to the two everyday destinations.
             CommandGroup(after: .sidebar) {
                 Divider()

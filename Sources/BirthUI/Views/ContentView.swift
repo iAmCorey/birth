@@ -42,6 +42,21 @@ struct ContentView: View {
         } message: {
             Text(state.lastErrorMessage ?? "")
         }
+        // Root-level: removal can now start from 启动应用 (agent rows) as
+        // well as the advanced table, so the dialog must outlive both.
+        .confirmationDialog(
+            "移除“\(state.itemPendingRemoval?.displayName ?? "")”？",
+            isPresented: Binding(
+                get: { state.itemPendingRemoval != nil },
+                set: { if !$0 { state.itemPendingRemoval = nil } }
+            )
+        ) {
+            Button("移到废纸篓", role: .destructive) {
+                state.confirmRemoval()
+            }
+        } message: {
+            Text("该任务会先停止运行，其 plist 文件将移到废纸篓。Birth 会在 ~/Library/Application Support/Birth/Backups 中保留一份备份。")
+        }
     }
 
     private var isAdvancedSelection: Bool {
@@ -85,19 +100,6 @@ struct AdvancedItemsView: View {
                     ItemDetailView(item: item)
                         .inspectorColumnWidth(min: 300, ideal: 340)
                 }
-            }
-            .confirmationDialog(
-                "移除“\(state.itemPendingRemoval?.displayName ?? "")”？",
-                isPresented: Binding(
-                    get: { state.itemPendingRemoval != nil },
-                    set: { if !$0 { state.itemPendingRemoval = nil } }
-                )
-            ) {
-                Button("移到废纸篓", role: .destructive) {
-                    state.confirmRemoval()
-                }
-            } message: {
-                Text("该任务会先停止运行，其 plist 文件将移到废纸篓。Birth 会在 ~/Library/Application Support/Birth/Backups 中保留一份备份。")
             }
     }
 
