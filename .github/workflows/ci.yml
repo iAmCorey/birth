@@ -1,0 +1,21 @@
+# Build + unit tests on every push/PR. The smoke-launch half of the
+# release gate (scripts/release-check.sh) needs a GUI session, so it
+# stays local-only; CI covers the pure-logic suites.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift version
+        run: swift --version
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test
