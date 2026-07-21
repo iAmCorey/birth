@@ -2,6 +2,12 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.1] - 2026-07-21
+
+### 变更
+
+- 侧边栏改为对称的同构结构：两个分组标题即产品分区（"启动应用" / "高级启动项"），每组均以"全部"开头——此前第一组悬空无标题，与带标题的第二组视觉不一致
+
 ## [0.2.0] - 2026-07-21
 
 ### 新增
@@ -32,5 +38,6 @@
 - **全中文界面**（含系统菜单栏，声明 zh-Hans 本地化）
 - **测试与发版设施**：45 个单元测试（含伪装检测与特权命令标记协议回归）；`scripts/release-check.sh` 发版门禁（测试 → 打包 → 冒烟启动 → 进程 / 主线程 / 崩溃三重健康检查）；GitHub Actions CI
 
+[0.2.1]: https://github.com/iAmCorey/birth/releases/tag/v0.2.1
 [0.2.0]: https://github.com/iAmCorey/birth/releases/tag/v0.2.0
 [0.1.0]: https://github.com/iAmCorey/birth/releases/tag/v0.1.0

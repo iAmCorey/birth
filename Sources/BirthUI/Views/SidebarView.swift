@@ -6,8 +6,10 @@ struct SidebarView: View {
     var body: some View {
         @Bindable var state = state
         List(selection: $state.selection) {
-            Section {
-                row(.loginApps)
+            Section("启动应用") {
+                // Row reads 全部 inside its group; the window title still
+                // carries the section name (displayTitle = 启动应用).
+                row(.loginApps, overrideTitle: "全部")
                 if state.count(for: .recentlyRemoved) > 0 {
                     row(.recentlyRemoved)
                 }
@@ -39,9 +41,9 @@ struct SidebarView: View {
         }
     }
 
-    private func row(_ section: AppState.SidebarSection) -> some View {
+    private func row(_ section: AppState.SidebarSection, overrideTitle: String? = nil) -> some View {
         Label {
-            Text(section.displayTitle)
+            Text(overrideTitle ?? section.displayTitle)
                 .badge(state.count(for: section))
         } icon: {
             Image(systemName: section.systemImage)
