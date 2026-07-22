@@ -1,9 +1,11 @@
 # Birth
 
-[![CI](https://github.com/iAmCorey/birth/actions/workflows/ci.yml/badge.svg)](https://github.com/iAmCorey/birth/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/iAmCorey/birth)](https://github.com/iAmCorey/birth/releases)
-![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/iAmCorey/birth/ci.yml?style=flat-square&label=CI)](https://github.com/iAmCorey/birth/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/iAmCorey/birth?style=flat-square)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/iAmCorey/birth?style=flat-square)](https://github.com/iAmCorey/birth/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-007AFF?style=flat-square)](https://github.com/iAmCorey/birth/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/iAmCorey/birth/total?style=flat-square)](https://github.com/iAmCorey/birth/releases)
+[![Stars](https://img.shields.io/github/stars/iAmCorey/birth?style=flat-square)](https://github.com/iAmCorey/birth/stargazers)
 
 **一目了然地管理你的电脑启动项。**
 
@@ -108,6 +110,10 @@ rm -rf ~/Library/Application\ Support/Birth                # 删除操作的备�
 ## 反馈
 
 Bug 与建议请提 [GitHub Issues](https://github.com/iAmCorey/birth/issues)。
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=iAmCorey/birth&type=Date)](https://star-history.com/#iAmCorey/birth&Date)
 
 ## 许可证
 

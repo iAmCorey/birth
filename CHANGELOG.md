@@ -2,6 +2,12 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.2] - 2026-07-21
+
+### 修复
+
+- 启停开关现在有真实的切换动画：点击立即滑动（乐观更新），操作进行中开关保持可见（变暗禁用，不再被替换成加载图标），操作失败时平滑滑回原位
+
 ## [0.2.1] - 2026-07-21
 
 ### 变更
@@ -38,6 +44,7 @@
 - **全中文界面**（含系统菜单栏，声明 zh-Hans 本地化）
 - **测试与发版设施**：45 个单元测试（含伪装检测与特权命令标记协议回归）；`scripts/release-check.sh` 发版门禁（测试 → 打包 → 冒烟启动 → 进程 / 主线程 / 崩溃三重健康检查）；GitHub Actions CI
 
+[0.2.2]: https://github.com/iAmCorey/birth/releases/tag/v0.2.2
 [0.2.1]: https://github.com/iAmCorey/birth/releases/tag/v0.2.1
 [0.2.0]: https://github.com/iAmCorey/birth/releases/tag/v0.2.0
 [0.1.0]: https://github.com/iAmCorey/birth/releases/tag/v0.1.0

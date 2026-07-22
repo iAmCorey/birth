@@ -279,21 +279,8 @@ private struct AgentAppRow: View {
 
             Spacer()
 
-            if state.busyItemIDs.contains(item.id) {
-                ProgressView()
-                    .controlSize(.small)
-            } else {
-                Toggle(
-                    "",
-                    isOn: Binding(
-                        get: { item.enablement.isEnabled ?? false },
-                        set: { state.setEnabled($0, item: item) }
-                    )
-                )
-                .toggleStyle(.switch)
-                .controlSize(.mini)
+            EnablementToggle(item: item)
                 .help("关闭后不再于登录时自动打开（无需密码）")
-            }
         }
         .padding(.vertical, 4)
         .contextMenu {

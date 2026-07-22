@@ -225,25 +225,14 @@ private struct EnabledCell: View {
     let item: LaunchItem
 
     var body: some View {
-        if state.busyItemIDs.contains(item.id) {
-            ProgressView()
-                .controlSize(.small)
-        } else if case .managedBySystem = item.enablement {
+        if case .managedBySystem = item.enablement {
             Toggle("", isOn: .constant(item.enablement.isEnabled ?? false))
                 .toggleStyle(.switch)
                 .controlSize(.mini)
                 .disabled(true)
                 .help("由 macOS 管理——请在系统设置 > 通用 > 登录项与扩展中更改")
         } else {
-            Toggle(
-                "",
-                isOn: Binding(
-                    get: { item.enablement.isEnabled ?? false },
-                    set: { state.setEnabled($0, item: item) }
-                )
-            )
-            .toggleStyle(.switch)
-            .controlSize(.mini)
+            EnablementToggle(item: item)
         }
     }
 }
