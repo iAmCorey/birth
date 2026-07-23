@@ -12,6 +12,6 @@ enum BirthInfo {
     static let repositoryURL = URL(string: "https://github.com/iAmCorey/birth")!
 
     static var displayVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.2.2"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.2.3"
     }
 }

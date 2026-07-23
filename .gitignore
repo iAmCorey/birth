@@ -8,3 +8,6 @@ DerivedData/
 .swiftpm/
 Package.resolved
 .vscode/
+CLAUDE.md
+AGENTS.md
+.claude/

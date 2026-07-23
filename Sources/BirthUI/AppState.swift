@@ -139,7 +139,7 @@ final class AppState {
         // Coming back from System Settings after granting Full Disk Access
         // should just work — whichever door led there (refresh dialog,
         // sidebar card, or the 登录项 guidance page). Refresh only when the
-        // slice failed earlier AND the cheap file-open probe now passes;
+        // slice failed earlier AND the cheap filesystem probe now passes;
         // while access stays missing, activation costs one probe, not a
         // full rescan.
         NotificationCenter.default.addObserver(
