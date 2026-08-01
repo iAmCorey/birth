@@ -37,12 +37,70 @@ private final class VariantRecord: NSObject, NSCoding {
     }
 }
 
-private func makeArchive(records: [BTMArchiveRecord]) -> Data {
+@objc(BirthTestsVariantUserSettings)
+private final class VariantUserSettings: NSObject, NSCoding {
+    required init?(coder: NSCoder) { nil }
+
+    override init() {}
+
+    func encode(with coder: NSCoder) {}
+}
+
+@objc(BirthTestsVariantUserStorage)
+private final class VariantUserStorage: NSObject, NSCoding {
+    let records: NSArray
+    let userIdentifier: String
+    let userSettings = VariantUserSettings()
+
+    init(records: [BTMArchiveRecord], userIdentifier: String) {
+        self.records = records as NSArray
+        self.userIdentifier = userIdentifier
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    func encode(with coder: NSCoder) {
+        coder.encode(records, forKey: "records")
+        coder.encode(userIdentifier, forKey: "userIdentifier")
+        coder.encode(userSettings, forKey: "userSettings")
+    }
+}
+
+private func makeArchive(
+    records: [BTMArchiveRecord],
+    rootKey: String = "store",
+    storageClassName: String = "Storage",
+    recordClassName: String = "ItemRecord"
+) -> Data {
     let storage = BTMArchiveStorage(itemsByUserIdentifier: [accountID: records])
     let archiver = NSKeyedArchiver(requiringSecureCoding: true)
-    archiver.setClassName("Storage", for: BTMArchiveStorage.self)
+    archiver.setClassName(storageClassName, for: BTMArchiveStorage.self)
+    archiver.setClassName(recordClassName, for: BTMArchiveRecord.self)
+    archiver.encode(storage, forKey: rootKey)
+    archiver.finishEncoding()
+    return archiver.encodedData
+}
+
+private func makeNestedArchive(_ nestedData: Data, rootKey: String = "storeData") -> Data {
+    let archiver = NSKeyedArchiver(requiringSecureCoding: false)
+    archiver.encode(nestedData, forKey: rootKey)
+    archiver.finishEncoding()
+    return archiver.encodedData
+}
+
+private func makeMacOS27Archive(
+    records: [BTMArchiveRecord],
+    userIdentifier: String = accountID
+) -> Data {
+    let currentStorage = VariantUserStorage(
+        records: records,
+        userIdentifier: userIdentifier
+    )
+    let archiver = NSKeyedArchiver(requiringSecureCoding: false)
+    archiver.setClassName("BTMUserStore", for: VariantUserStorage.self)
+    archiver.setClassName("BTMUserSettings", for: VariantUserSettings.self)
     archiver.setClassName("ItemRecord", for: BTMArchiveRecord.self)
-    archiver.encode(storage, forKey: "store")
+    archiver.encode(currentStorage, forKey: "store")
     archiver.finishEncoding()
     return archiver.encodedData
 }
@@ -141,6 +199,73 @@ struct BTMArchiveDecoderTests {
         #expect(item.embeddedItemIdentifiers == ["8.com.example.agent"])
     }
 
+    @Test func discoversRenamedPrivateClassesAndRootKeyFromStructure() throws {
+        let data = makeArchive(
+            records: sampleRecords(),
+            rootKey: "database",
+            storageClassName: "BackgroundTasks27.StoreEnvelope",
+            recordClassName: "BackgroundTasks27.LoginRecord"
+        )
+        let items = try BTMArchiveDecoder.decode(data, accountIdentifier: accountID)
+
+        #expect(items.count == 3)
+        #expect(items.contains { $0.bundleIdentifier == "com.example.browser" })
+    }
+
+    @Test func retriesStructuralDiscoveryWhenOnlyRootKeyChanged() throws {
+        let data = makeArchive(records: sampleRecords(), rootKey: "database")
+        let items = try BTMArchiveDecoder.decode(data, accountIdentifier: accountID)
+
+        #expect(items.count == 3)
+    }
+
+    @Test func retriesStructuralDiscoveryWhenOnlyRecordClassChanged() throws {
+        let data = makeArchive(
+            records: sampleRecords(),
+            recordClassName: "BackgroundTasks27.LoginRecord"
+        )
+        let items = try BTMArchiveDecoder.decode(data, accountIdentifier: accountID)
+
+        #expect(items.count == 3)
+    }
+
+    @Test func decodesMacOS27PerUserStoreLayout() throws {
+        let data = makeMacOS27Archive(records: sampleRecords())
+        let items = try BTMArchiveDecoder.decode(data, accountIdentifier: accountID)
+
+        #expect(items.count == 3)
+        #expect(items.contains { $0.bundleIdentifier == "com.example.browser" })
+    }
+
+    @Test func macOS27PerUserStoreRejectsAnotherAccountsRecords() throws {
+        let data = makeMacOS27Archive(
+            records: sampleRecords(),
+            userIdentifier: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"
+        )
+        let items = try BTMArchiveDecoder.decode(data, accountIdentifier: accountID)
+
+        #expect(items.isEmpty)
+    }
+
+    @Test func unwrapsNestedStoreDataArchive() throws {
+        let inner = makeArchive(
+            records: sampleRecords(),
+            rootKey: "root",
+            storageClassName: "FutureStorage",
+            recordClassName: "FutureRecord"
+        )
+        let items = try BTMArchiveDecoder.decode(
+            makeNestedArchive(inner),
+            accountIdentifier: accountID
+        )
+
+        #expect(items.map(\.typeDescription) == [
+            "app",
+            "login item",
+            "background app refresh",
+        ])
+    }
+
     @Test func mapsIdentityDispositionAndBundlePath() throws {
         let items = try BTMArchiveDecoder.decode(
             makeArchive(records: sampleRecords()),
@@ -200,6 +325,28 @@ struct BTMArchiveDecoderTests {
                 Issue.record("Expected unsupportedFormat, got \(error)")
                 return
             }
+        }
+    }
+
+    @Test func unsupportedArchivesIncludeSafeStructuralDiagnostics() throws {
+        let archiver = NSKeyedArchiver(requiringSecureCoding: false)
+        archiver.encode(["unexpected": "value"], forKey: "futureStore")
+        archiver.finishEncoding()
+
+        do {
+            _ = try BTMArchiveDecoder.decode(
+                archiver.encodedData,
+                accountIdentifier: accountID
+            )
+            Issue.record("Expected unsupported-format failure")
+        } catch let error as BTMReader.BTMError {
+            guard case .unsupportedFormat(let detail) = error else {
+                Issue.record("Expected unsupportedFormat, got \(error)")
+                return
+            }
+            #expect(detail.contains("top=[futureStore]"))
+            #expect(detail.contains("classes=["))
+            #expect(!detail.contains("value"))
         }
     }
 

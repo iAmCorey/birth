@@ -3,6 +3,8 @@ import SwiftUI
 
 struct ItemTableView: View {
     private var state: AppState { .shared }
+    @State private var copiedDiagnosticReport: String?
+
     var body: some View {
         @Bindable var state = state
         Group {
@@ -96,6 +98,7 @@ struct ItemTableView: View {
                 Text(L("btm.unsupported.body"))
             } actions: {
                 retryAndSystemSettingsButtons
+                copyDiagnosticsButton
             }
         case .storeUnavailable, .accountUnavailable:
             ContentUnavailableView {
@@ -104,6 +107,7 @@ struct ItemTableView: View {
                 Text(L("btm.unavailable.body"))
             } actions: {
                 retryAndSystemSettingsButtons
+                copyDiagnosticsButton
             }
         case nil:
             EmptyView()
@@ -117,6 +121,19 @@ struct ItemTableView: View {
             }
             Button(L("common.openSystemSettings")) {
                 state.openLoginItemsSettings()
+            }
+        }
+    }
+
+    private var copyDiagnosticsButton: some View {
+        let currentReport = state.loginItemsDiagnosticReport
+        return Button(
+            copiedDiagnosticReport == currentReport
+                ? L("btm.diagnosticsCopied")
+                : L("btm.copyDiagnostics")
+        ) {
+            if state.copyLoginItemsDiagnostic() {
+                copiedDiagnosticReport = currentReport
             }
         }
     }

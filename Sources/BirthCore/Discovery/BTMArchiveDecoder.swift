@@ -4,20 +4,89 @@ import Foundation
 /// without loading private frameworks or launching `sfltool`.
 enum BTMArchiveDecoder {
     static func decode(_ data: Data, accountIdentifier: String) throws -> [BTMItem] {
-        let archivedClasses = try archivedClassNames(in: data)
-        let storageNames = archivedClasses.filter { classBaseName($0) == "Storage" }
-        let recordNames = archivedClasses.filter {
-            let name = classBaseName($0)
-            return name == "ItemRecord" || name == "BTMItem"
-        }
-        // A legitimate empty store has no archived ItemRecord class at all.
-        // Storage is the only class that must always be present.
-        guard !storageNames.isEmpty else {
-            throw BTMReader.BTMError.unsupportedFormat(
-                detail: "Missing Storage archive class"
-            )
+        try decode(data, accountIdentifier: accountIdentifier, nestingDepth: 0)
+    }
+
+    /// Apple's private archive has used both a direct top-level storage object
+    /// and Data containing a second keyed archive. Discover both layouts from
+    /// structure instead of treating private class and root-key names as API.
+    private static func decode(
+        _ data: Data,
+        accountIdentifier: String,
+        nestingDepth: Int
+    ) throws -> [BTMItem] {
+        var failures: [String] = []
+
+        // Keep the current macOS path cheap: class-table inspection plus one
+        // unarchive, matching the original decoder. The normalized structural
+        // scan below is reserved for variants that break the conventional
+        // Storage/ItemRecord/store contract.
+        if let conventional = try? conventionalClasses(in: data) {
+            do {
+                return try decodeDirect(
+                    data,
+                    accountIdentifier: accountIdentifier,
+                    rootKey: "store",
+                    storageClassNames: conventional.storage,
+                    recordClassNames: conventional.records
+                )
+            } catch let error as BTMReader.BTMError {
+                failures.append("store: \(error.diagnosticDetail)")
+            } catch {
+                failures.append("store: \(error.localizedDescription)")
+            }
         }
 
+        let layout = try ArchiveLayout(data: data)
+        for rootKey in layout.storageRootKeys {
+            do {
+                return try decodeDirect(
+                    data,
+                    accountIdentifier: accountIdentifier,
+                    rootKey: rootKey,
+                    storageClassNames: layout.storageClassNames,
+                    recordClassNames: layout.recordClassNames
+                )
+            } catch let error as BTMReader.BTMError {
+                failures.append("\(rootKey): \(error.diagnosticDetail)")
+            } catch {
+                failures.append("\(rootKey): \(error.localizedDescription)")
+            }
+        }
+
+        // Bound recursion so a malformed archive cannot create an unbounded
+        // chain of nested Data payloads.
+        if nestingDepth < 3 {
+            for nested in layout.nestedArchives {
+                do {
+                    return try decode(
+                        nested.data,
+                        accountIdentifier: accountIdentifier,
+                        nestingDepth: nestingDepth + 1
+                    )
+                } catch let error as BTMReader.BTMError {
+                    failures.append("\(nested.key): \(error.diagnosticDetail)")
+                } catch {
+                    failures.append("\(nested.key): \(error.localizedDescription)")
+                }
+            }
+        }
+
+        let reason = failures.isEmpty
+            ? "No compatible storage object"
+            : failures.joined(separator: " | ")
+        throw BTMReader.BTMError.unsupportedFormat(
+            detail: "\(reason); \(layout.diagnosticSummary)"
+        )
+    }
+
+    private static func decodeDirect(
+        _ data: Data,
+        accountIdentifier: String,
+        rootKey: String,
+        storageClassNames: [String],
+        recordClassNames: [String]
+    ) throws -> [BTMItem] {
         let unarchiver: NSKeyedUnarchiver
         do {
             unarchiver = try NSKeyedUnarchiver(forReadingFrom: data)
@@ -33,11 +102,16 @@ enum BTMArchiveDecoder {
         // but do not make one representation mismatch reject the whole store.
         unarchiver.requiresSecureCoding = false
         unarchiver.decodingFailurePolicy = .setErrorAndReturn
-        storageNames.forEach { unarchiver.setClass(BTMArchiveStorage.self, forClassName: $0) }
-        recordNames.forEach { unarchiver.setClass(BTMArchiveRecord.self, forClassName: $0) }
+        storageClassNames.forEach {
+            unarchiver.setClass(BTMArchiveStorage.self, forClassName: $0)
+        }
+        recordClassNames.forEach {
+            unarchiver.setClass(BTMArchiveRecord.self, forClassName: $0)
+        }
 
-        guard let storage = unarchiver.decodeObject(forKey: "store") as? BTMArchiveStorage else {
-            let detail = unarchiver.error?.localizedDescription ?? "Missing root 'store' object"
+        guard let storage = unarchiver.decodeObject(forKey: rootKey) as? BTMArchiveStorage else {
+            let detail = unarchiver.error?.localizedDescription
+                ?? "Root '\(rootKey)' is not a compatible storage object"
             unarchiver.finishDecoding()
             throw BTMReader.BTMError.unsupportedFormat(detail: "Storage decoding: \(detail)")
         }
@@ -48,37 +122,167 @@ enum BTMArchiveDecoder {
             )
         }
 
-        let records = storage.itemsByUserIdentifier.first {
-            $0.key.caseInsensitiveCompare(accountIdentifier) == .orderedSame
-        }?.value ?? []
-        return makeItems(from: records)
+        return makeItems(from: storage.records(for: accountIdentifier))
     }
 
-    /// Read only the archive's class table before decoding. This lets module-
-    /// qualified class names evolve while keeping the accepted semantic names
-    /// narrow; arbitrary archived classes are never registered or instantiated.
-    private static func archivedClassNames(in data: Data) throws -> [String] {
-        let root: Any
-        do {
-            root = try PropertyListSerialization.propertyList(from: data, format: nil)
-        } catch {
-            throw BTMReader.BTMError.unsupportedFormat(
-                detail: "Property-list inspection: \(error.localizedDescription)"
-            )
-        }
+    private static func conventionalClasses(
+        in data: Data
+    ) throws -> (storage: [String], records: [String])? {
+        let root = try PropertyListSerialization.propertyList(from: data, format: nil)
         guard let archive = root as? [String: Any],
               archive["$archiver"] as? String == "NSKeyedArchiver",
               let objects = archive["$objects"] as? [Any]
-        else {
-            throw BTMReader.BTMError.unsupportedFormat(detail: "Not an NSKeyedArchiver store")
-        }
-        return objects.compactMap { object in
+        else { return nil }
+        let classNames = objects.compactMap { object in
             (object as? [String: Any])?["$classname"] as? String
         }
+        let storage = classNames.filter { classBaseName($0) == "Storage" }
+        guard !storage.isEmpty else { return nil }
+        let records = classNames.filter {
+            let name = classBaseName($0)
+            return name == "ItemRecord" || name == "BTMItem"
+        }
+        return (storage, records)
     }
 
     private static func classBaseName(_ name: String) -> String {
         name.split(separator: ".").last.map(String.init) ?? name
+    }
+
+    /// Structural description of a keyed archive. UID objects are a private
+    /// CoreFoundation type when PropertyListSerialization reads binary data.
+    /// Serializing to XML makes them explicit `CF$UID` dictionaries; rename
+    /// that marker before parsing the XML back so Foundation does not turn
+    /// them opaque again.
+    private struct ArchiveLayout {
+        let storageRootKeys: [String]
+        let storageClassNames: [String]
+        let recordClassNames: [String]
+        let nestedArchives: [(key: String, data: Data)]
+        let diagnosticSummary: String
+
+        init(data: Data) throws {
+            let archive = try Self.normalizedArchive(from: data)
+            guard archive["$archiver"] as? String == "NSKeyedArchiver",
+                  let objects = archive["$objects"] as? [Any],
+                  let top = archive["$top"] as? [String: Any]
+            else {
+                throw BTMReader.BTMError.unsupportedFormat(
+                    detail: "Not an NSKeyedArchiver store"
+                )
+            }
+
+            let storageIndices = Set(objects.indices.filter { index in
+                guard let object = objects[index] as? [String: Any] else { return false }
+                return BTMArchiveStorage.groupedItemKeys.contains { object[$0] != nil }
+                    || (object["records"] != nil && object["userIdentifier"] != nil)
+            })
+            let recordIndices = objects.indices.filter { index in
+                guard let object = objects[index] as? [String: Any],
+                      object["type"] != nil,
+                      object["disposition"] != nil
+                else { return false }
+                return object["identifier"] != nil
+                    || object["uuid"] != nil
+                    || object["name"] != nil
+            }
+
+            storageClassNames = Set(storageIndices.compactMap {
+                Self.className(forObjectAt: $0, objects: objects)
+            }).sorted()
+            recordClassNames = Set(recordIndices.compactMap {
+                Self.className(forObjectAt: $0, objects: objects)
+            }).sorted()
+
+            storageRootKeys = top.compactMap { key, value in
+                guard let index = Self.uidIndex(value),
+                      storageIndices.contains(index)
+                else { return nil }
+                return key
+            }.sorted { lhs, rhs in
+                if lhs == "store" { return true }
+                if rhs == "store" { return false }
+                return lhs < rhs
+            }
+
+            nestedArchives = top.compactMap { key, value in
+                guard let index = Self.uidIndex(value),
+                      objects.indices.contains(index),
+                      let nestedData = objects[index] as? Data
+                else { return nil }
+                return (key, nestedData)
+            }.sorted { $0.key < $1.key }
+
+            let classNames = objects.compactMap { object in
+                (object as? [String: Any])?["$classname"] as? String
+            }
+            let classSummary = classNames.sorted().prefix(16).joined(separator: ",")
+            let topSummary = top.keys.sorted().joined(separator: ",")
+            diagnosticSummary = "top=[\(topSummary)] classes=[\(classSummary)] objects=\(objects.count)"
+        }
+
+        private static func normalizedArchive(from data: Data) throws -> [String: Any] {
+            let root: Any
+            do {
+                root = try PropertyListSerialization.propertyList(from: data, format: nil)
+            } catch {
+                throw BTMReader.BTMError.unsupportedFormat(
+                    detail: "Property-list inspection: \(error.localizedDescription)"
+                )
+            }
+            guard let rawArchive = root as? [String: Any],
+                  rawArchive["$archiver"] as? String == "NSKeyedArchiver"
+            else {
+                throw BTMReader.BTMError.unsupportedFormat(
+                    detail: "Not an NSKeyedArchiver store"
+                )
+            }
+
+            do {
+                let xml = try PropertyListSerialization.data(
+                    fromPropertyList: rawArchive,
+                    format: .xml,
+                    options: 0
+                )
+                let normalizedXML = String(decoding: xml, as: UTF8.self)
+                    .replacingOccurrences(
+                        of: "<key>CF$UID</key>",
+                        with: "<key>BirthArchiveUID</key>"
+                    )
+                guard let normalized = try PropertyListSerialization.propertyList(
+                    from: Data(normalizedXML.utf8),
+                    format: nil
+                ) as? [String: Any] else {
+                    throw BTMReader.BTMError.unsupportedFormat(
+                        detail: "Normalized archive root is not a dictionary"
+                    )
+                }
+                return normalized
+            } catch let error as BTMReader.BTMError {
+                throw error
+            } catch {
+                throw BTMReader.BTMError.unsupportedFormat(
+                    detail: "Archive normalization: \(error.localizedDescription)"
+                )
+            }
+        }
+
+        private static func uidIndex(_ value: Any) -> Int? {
+            guard let uid = value as? [String: Any],
+                  let number = uid["BirthArchiveUID"] as? NSNumber
+            else { return nil }
+            return number.intValue
+        }
+
+        private static func className(forObjectAt index: Int, objects: [Any]) -> String? {
+            guard objects.indices.contains(index),
+                  let object = objects[index] as? [String: Any],
+                  let classIndex = uidIndex(object["$class"] as Any),
+                  objects.indices.contains(classIndex),
+                  let descriptor = objects[classIndex] as? [String: Any]
+            else { return nil }
+            return descriptor["$classname"] as? String
+        }
     }
 
     private static func makeItems(from records: [BTMArchiveRecord]) -> [BTMItem] {
@@ -178,21 +382,88 @@ enum BTMArchiveDecoder {
 /// Decoding never loads Apple's private daemon executable.
 final class BTMArchiveStorage: NSObject, NSSecureCoding {
     static var supportsSecureCoding: Bool { true }
+    static let groupedItemKeys = ["itemsByUserIdentifier", "itemsByUserID"]
 
-    let itemsByUserIdentifier: [String: [BTMArchiveRecord]]
+    let itemsByUserIdentifier: NSDictionary?
+    let directRecords: [BTMArchiveRecord]?
+    let userIdentifier: String?
 
     init(itemsByUserIdentifier: [String: [BTMArchiveRecord]]) {
-        self.itemsByUserIdentifier = itemsByUserIdentifier
+        self.itemsByUserIdentifier = itemsByUserIdentifier as NSDictionary
+        directRecords = nil
+        userIdentifier = nil
     }
 
     required init?(coder: NSCoder) {
-        guard let items = coder.decodeObject(forKey: "itemsByUserIdentifier")
-            as? [String: [BTMArchiveRecord]] else { return nil }
-        itemsByUserIdentifier = items
+        var decodedItems: NSDictionary?
+        for key in Self.groupedItemKeys where coder.containsValue(forKey: key) {
+            if let items = coder.decodeObject(forKey: key) as? NSDictionary {
+                decodedItems = items
+                break
+            }
+        }
+
+        if let decodedItems {
+            itemsByUserIdentifier = decodedItems
+            directRecords = nil
+            userIdentifier = nil
+            return
+        }
+
+        guard coder.containsValue(forKey: "records"),
+              let records = coder.decodeObject(forKey: "records") as? NSArray,
+              let identifier = Self.identifierString(
+                  coder.decodeObject(forKey: "userIdentifier")
+              )
+        else { return nil }
+        itemsByUserIdentifier = nil
+        directRecords = records.compactMap { $0 as? BTMArchiveRecord }
+        userIdentifier = identifier
     }
 
     func encode(with coder: NSCoder) {
-        coder.encode(itemsByUserIdentifier, forKey: "itemsByUserIdentifier")
+        if let itemsByUserIdentifier {
+            coder.encode(itemsByUserIdentifier, forKey: "itemsByUserIdentifier")
+        } else {
+            coder.encode(directRecords, forKey: "records")
+            coder.encode(userIdentifier, forKey: "userIdentifier")
+        }
+    }
+
+    func records(for accountIdentifier: String) -> [BTMArchiveRecord] {
+        if let itemsByUserIdentifier {
+            for (rawKey, rawValue) in itemsByUserIdentifier {
+                guard Self.identifierString(rawKey)?
+                    .caseInsensitiveCompare(accountIdentifier) == .orderedSame
+                else { continue }
+                if let records = rawValue as? [BTMArchiveRecord] {
+                    return records
+                }
+                if let records = rawValue as? NSArray {
+                    return records.compactMap { $0 as? BTMArchiveRecord }
+                }
+                return []
+            }
+            return []
+        }
+
+        guard userIdentifier?.caseInsensitiveCompare(accountIdentifier) == .orderedSame else {
+            return []
+        }
+        return directRecords ?? []
+    }
+
+    private static func identifierString(_ rawValue: Any?) -> String? {
+        switch rawValue {
+        case let value as String:
+            value
+        case let value as UUID:
+            value.uuidString
+        case let value as NSUUID:
+            value.uuidString
+        default:
+            nil
+        }
     }
 }
 
@@ -269,7 +540,10 @@ final class BTMArchiveRecord: NSObject, NSSecureCoding {
         executablePath = coder.decodeObject(forKey: "executablePath") as? String
         bundleIdentifier = coder.decodeObject(forKey: "bundleIdentifier") as? String
         container = coder.decodeObject(forKey: "container") as? String
-        let archivedItems = coder.decodeObject(forKey: "items")
+        let embeddedItemsKey = coder.containsValue(forKey: "items")
+            ? "items"
+            : "embeddedItems"
+        let archivedItems = coder.decodeObject(forKey: embeddedItemsKey)
         if let values = archivedItems as? Set<String> {
             embeddedItems = values
         } else if let values = archivedItems as? [String] {

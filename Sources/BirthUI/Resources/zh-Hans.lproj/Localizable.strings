@@ -61,6 +61,8 @@
 "btm.unsupported.body" = "macOS 更改了其私有登录项数据库格式。Birth 已安全停止读取，不会调用 sfltool，也不会请求管理员密码。请在适配当前 macOS 版本的 Birth 更新发布后升级。";
 "btm.unavailable.title" = "登录项数据库不可用";
 "btm.unavailable.body" = "Birth 无法读取登录项数据库或将其与当前账户匹配。其他启动项分类仍可正常使用；可以重试，或前往系统设置查看登录项。";
+"btm.copyDiagnostics" = "复制诊断信息";
+"btm.diagnosticsCopied" = "诊断信息已复制";
 "common.tryAgain" = "重试";
 "common.notNow" = "暂不";
 "inspector.empty.title" = "未选择项目";

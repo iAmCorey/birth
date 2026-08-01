@@ -57,7 +57,9 @@ public struct BTMReader: Sendable {
     /// infer FDA from TCC databases or directory permissions that can move or
     /// change semantics between macOS releases.
     public static func hasFullDiskAccess() -> Bool {
-        guard let storeURL = try? latestStoreURL() else { return false }
+        guard let accountIdentifier = try? accountIdentifier(for: Int(getuid())),
+              let storeURL = try? latestStoreURL(accountIdentifier: accountIdentifier)
+        else { return false }
         return probeOpen(storeURL.path) == .granted
     }
 
@@ -66,9 +68,11 @@ public struct BTMReader: Sendable {
     public func loginItems(uid: Int = Int(getuid())) async throws -> [BTMItem] {
         do {
             return try await Task.detached(priority: .userInitiated) {
-                let storeURL = try Self.latestStoreURL()
-                let data = try Self.readStore(at: storeURL)
                 let accountIdentifier = try Self.accountIdentifier(for: uid)
+                let storeURL = try Self.latestStoreURL(
+                    accountIdentifier: accountIdentifier
+                )
+                let data = try Self.readStore(at: storeURL)
                 return try BTMArchiveDecoder.decode(data, accountIdentifier: accountIdentifier)
             }.value
         } catch let error as BTMError {
@@ -81,7 +85,8 @@ public struct BTMReader: Sendable {
     }
 
     static func latestStoreURL(
-        in directory: URL = URL(filePath: btmStoreDirectory, directoryHint: .isDirectory)
+        in directory: URL = URL(filePath: btmStoreDirectory, directoryHint: .isDirectory),
+        accountIdentifier: String? = nil
     ) throws -> URL {
         let urls: [URL]
         do {
@@ -94,22 +99,47 @@ public struct BTMReader: Sendable {
             throw classifyReadError(error)
         }
 
-        let candidates = urls.compactMap { url -> (url: URL, version: Int, modified: Date)? in
+        let candidates = urls.compactMap {
+            url -> (url: URL, version: Int, userIdentifier: String?, modified: Date)? in
             let name = url.lastPathComponent
             guard name.hasPrefix(storePrefix), name.hasSuffix(storeSuffix) else { return nil }
             let versionStart = name.index(name.startIndex, offsetBy: storePrefix.count)
             let versionEnd = name.index(name.endIndex, offsetBy: -storeSuffix.count)
-            guard versionStart < versionEnd,
-                  let version = Int(name[versionStart..<versionEnd])
+            guard versionStart < versionEnd else { return nil }
+            let identity = name[versionStart..<versionEnd].split(
+                separator: "-",
+                maxSplits: 1,
+                omittingEmptySubsequences: false
+            )
+            guard let rawVersion = identity.first,
+                  let version = Int(rawVersion),
+                  identity.count < 2 || !identity[1].isEmpty
             else { return nil }
+            let userIdentifier = identity.count == 2 ? String(identity[1]) : nil
+            if let accountIdentifier,
+               let userIdentifier,
+               userIdentifier.caseInsensitiveCompare(accountIdentifier) != .orderedSame {
+                return nil
+            }
             let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .isRegularFileKey])
             guard values?.isRegularFile != false else { return nil }
-            return (url, version, values?.contentModificationDate ?? .distantPast)
+            return (
+                url,
+                version,
+                userIdentifier,
+                values?.contentModificationDate ?? .distantPast
+            )
         }
         guard let newest = candidates.max(by: { lhs, rhs in
-            lhs.version == rhs.version ? lhs.modified < rhs.modified : lhs.version < rhs.version
+            if lhs.version != rhs.version { return lhs.version < rhs.version }
+            let lhsSpecific = lhs.userIdentifier != nil
+            let rhsSpecific = rhs.userIdentifier != nil
+            if lhsSpecific != rhsSpecific { return !lhsSpecific && rhsSpecific }
+            return lhs.modified < rhs.modified
         }) else {
-            throw BTMError.storeUnavailable(detail: "No BackgroundItems-v*.btm store found")
+            throw BTMError.storeUnavailable(
+                detail: "No BackgroundItems-v*.btm store found for the current account"
+            )
         }
         return newest.url
     }

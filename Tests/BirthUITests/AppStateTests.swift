@@ -73,6 +73,37 @@ struct AppStateTests {
         #expect(AppState.SidebarSection(storageValue: "domain.garbage") == nil)
     }
 
+    @Test func loginItemsDiagnosticReportContainsOnlySupportContext() throws {
+        let box = StateBox()
+        defer { box.cleanUp() }
+        box.state.loginItemsError = .unsupportedFormat(
+            detail: "top=[storeData] classes=[FutureStorage] objects=42"
+        )
+
+        let report = try #require(box.state.loginItemsDiagnosticReport)
+        #expect(report.contains("Birth 0.2.8"))
+        #expect(report.contains("macOS"))
+        #expect(report.contains("top=[storeData]"))
+        #expect(!report.contains("/Applications/"))
+    }
+
+    @Test func loginItemsDiagnosticReportRedactsAccountUUIDAndPaths() throws {
+        let box = StateBox()
+        defer { box.cleanUp() }
+        box.state.loginItemsError = .storeUnavailable(
+            detail: """
+            Read “/Applications/Secret Tool.app”: \
+            BackgroundItems-v17-89C11FFF-0000-0000-0000-000000000000.btm
+            """
+        )
+
+        let report = try #require(box.state.loginItemsDiagnosticReport)
+        #expect(report.contains("<redacted-path>"))
+        #expect(report.contains("<redacted-uuid>"))
+        #expect(!report.contains("Secret Tool"))
+        #expect(!report.contains("89C11FFF"))
+    }
+
     @Test func selectionPersistsAcrossInstances() {
         let box = StateBox()
         defer { box.cleanUp() }

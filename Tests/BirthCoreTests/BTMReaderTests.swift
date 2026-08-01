@@ -29,6 +29,30 @@ struct BTMReaderTests {
         #expect(selected.lastPathComponent == "BackgroundItems-v10.btm")
     }
 
+    @Test func selectsCurrentUsersVersionedStoreAndIgnoresOtherUsers() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "birth-btm-user-stores-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let currentAccount = "89C11FFF-0000-0000-0000-000000000000"
+        for name in [
+            "BackgroundItems-v16.btm",
+            "BackgroundItems-v17-\(currentAccount.lowercased()).btm",
+            "BackgroundItems-v99-AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE.btm",
+        ] {
+            try Data(name.utf8).write(to: directory.appending(path: name))
+        }
+
+        let selected = try BTMReader.latestStoreURL(
+            in: directory,
+            accountIdentifier: currentAccount
+        )
+        #expect(
+            selected.lastPathComponent
+                == "BackgroundItems-v17-\(currentAccount.lowercased()).btm"
+        )
+    }
+
     @Test func permissionErrorsAreNotMisreportedAsFormatFailures() {
         let denied = NSError(domain: NSPOSIXErrorDomain, code: Int(EPERM))
         #expect(BTMReader.classifyReadError(denied) == .fullDiskAccessRequired)

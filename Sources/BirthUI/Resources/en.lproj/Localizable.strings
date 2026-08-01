@@ -62,6 +62,8 @@
 "btm.unsupported.body" = "macOS changed its private login items database format. Birth stopped safely without calling sfltool or requesting an administrator password. Update Birth when support for this macOS build is available.";
 "btm.unavailable.title" = "Login Items Database Unavailable";
 "btm.unavailable.body" = "Birth couldn't read or match the macOS login items database. Other startup-item categories remain available. Try again, or use System Settings to view login items.";
+"btm.copyDiagnostics" = "Copy Diagnostics";
+"btm.diagnosticsCopied" = "Diagnostics Copied";
 "common.tryAgain" = "Try Again";
 "common.notNow" = "Not Now";
 "inspector.empty.title" = "No Selection";

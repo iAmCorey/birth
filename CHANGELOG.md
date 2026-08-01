@@ -2,6 +2,12 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.8] - 2026-08-01
+
+### 修复
+
+- **macOS 27 登录项数据库兼容**（[#4](https://github.com/iAmCorey/birth/issues/4)）：支持按用户拆分的 BTM 数据库与新的 `BTMUserStore.records` 布局；解码不再依赖固定私有类名或根键，格式仍不兼容时可复制不含应用名称、路径或数据库内容的诊断信息
+
 ## [0.2.7] - 2026-07-30
 
 ### 修复
@@ -100,6 +106,7 @@
 - **全中文界面**（含系统菜单栏，声明 zh-Hans 本地化）
 - **测试与发版设施**：45 个单元测试（含伪装检测与特权命令标记协议回归）；`scripts/release-check.sh` 发版门禁（测试 → 打包 → 冒烟启动 → 进程 / 主线程 / 崩溃三重健康检查）；GitHub Actions CI
 
+[0.2.8]: https://github.com/iAmCorey/birth/releases/tag/v0.2.8
 [0.2.7]: https://github.com/iAmCorey/birth/releases/tag/v0.2.7
 [0.2.6]: https://github.com/iAmCorey/birth/releases/tag/v0.2.6
 [0.2.5]: https://github.com/iAmCorey/birth/releases/tag/v0.2.5

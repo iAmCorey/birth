@@ -849,6 +849,49 @@ final class AppState {
         NSWorkspace.shared.open(url)
     }
 
+    /// A privacy-safe support payload: archive structure and decoder stage,
+    /// never item names, application paths, or raw database contents.
+    var loginItemsDiagnosticReport: String? {
+        guard let error = loginItemsError else { return nil }
+        let detail = Self.redactedDiagnosticDetail(error.diagnosticDetail)
+        return """
+        Birth \(BirthInfo.displayVersion)
+        macOS \(ProcessInfo.processInfo.operatingSystemVersionString)
+        BTM: \(detail)
+        """
+    }
+
+    /// Diagnostic errors may originate in Foundation and contain the BTM
+    /// filename (which embeds the account UUID) or an absolute path. Keep the
+    /// useful decoder stage/class context while removing stable identifiers
+    /// before a report reaches the clipboard or a public issue.
+    private static func redactedDiagnosticDetail(_ detail: String) -> String {
+        let replacements = [
+            (
+                #"(?i)\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b"#,
+                "<redacted-uuid>"
+            ),
+            (
+                #"(?i)(?:file://)?/(?:Applications|Users|Library|System|private|var|tmp|Volumes|opt|usr)(?:/[^\n\"'“”|:]+)+"#,
+                "<redacted-path>"
+            ),
+        ]
+        return replacements.reduce(detail) { result, replacement in
+            result.replacingOccurrences(
+                of: replacement.0,
+                with: replacement.1,
+                options: .regularExpression
+            )
+        }
+    }
+
+    @discardableResult
+    func copyLoginItemsDiagnostic() -> Bool {
+        guard let report = loginItemsDiagnosticReport else { return false }
+        NSPasteboard.general.clearContents()
+        return NSPasteboard.general.setString(report, forType: .string)
+    }
+
     func openFullDiskAccessSettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") else { return }
         NSWorkspace.shared.open(url)
