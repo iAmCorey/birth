@@ -2,6 +2,12 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.11] - 2026-08-29
+
+### 新增
+
+- **应用图标适配深色外观**（[#7](https://github.com/iAmCorey/birth/issues/7)）：macOS 26 使用分层 Icon Composer 图标，Default 外观延续原有深蓝配色，Dark 外观改为黑色背景；macOS 14/15 及旧版构建工具继续使用传统静态图标，发版门禁会验证新旧图标与深色变体同时存在
+
 ## [0.2.10] - 2026-08-14
 
 ### 修复
@@ -119,6 +125,9 @@
 - **全中文界面**（含系统菜单栏，声明 zh-Hans 本地化）
 - **测试与发版设施**：45 个单元测试（含伪装检测与特权命令标记协议回归）；`scripts/release-check.sh` 发版门禁（测试 → 打包 → 冒烟启动 → 进程 / 主线程 / 崩溃三重健康检查）；GitHub Actions CI
 
+[0.2.11]: https://github.com/iAmCorey/birth/releases/tag/v0.2.11
+[0.2.10]: https://github.com/iAmCorey/birth/releases/tag/v0.2.10
+[0.2.9]: https://github.com/iAmCorey/birth/releases/tag/v0.2.9
 [0.2.8]: https://github.com/iAmCorey/birth/releases/tag/v0.2.8
 [0.2.7]: https://github.com/iAmCorey/birth/releases/tag/v0.2.7
 [0.2.6]: https://github.com/iAmCorey/birth/releases/tag/v0.2.6

@@ -28,6 +28,19 @@ echo "==> [3/4] smoke launch"
 ls "$APP"/Contents/Resources/birth_*.bundle >/dev/null 2>&1 \
     || fail "app 内缺少本地化资源包（Contents/Resources/birth_*.bundle）"
 
+# macOS 26 needs the Icon Composer rendition catalog; the ICNS remains the
+# fallback for older systems. A release must carry and declare both.
+[ -f "$APP/Contents/Resources/AppIcon.icns" ] \
+    || fail "app 内缺少旧系统回退图标 AppIcon.icns"
+[ -f "$APP/Contents/Resources/Assets.car" ] \
+    || fail "app 内缺少 macOS 26 自适应图标 Assets.car（需要 Xcode 26+）"
+[ "$(plutil -extract CFBundleIconName raw "$APP/Contents/Info.plist" 2>/dev/null || true)" = "AppIcon" ] \
+    || fail "Info.plist 未声明 CFBundleIconName=AppIcon"
+dark_icon_appearances=$(assetutil --info "$APP/Contents/Resources/Assets.car" 2>/dev/null \
+    | grep -c 'NSAppearanceNameDarkAqua' || true)
+[ "$dark_icon_appearances" -ge 1 ] \
+    || fail "Assets.car 内缺少深色图标变体"
+
 # Quit any running instance (path-pinned so a stale /Applications copy
 # can't hijack the name).
 osascript -e "tell application \"$APP\" to quit" 2>/dev/null || true

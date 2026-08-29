@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${VERSION:-0.2.10}"
+VERSION="${VERSION:-0.2.11}"
 APP=dist/Birth.app
 DMG="dist/Birth-${VERSION}.dmg"
 

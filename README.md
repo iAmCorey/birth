@@ -87,6 +87,8 @@ By default this builds for your machine's architecture (arm64 on Apple Silicon, 
 ./scripts/make-app.sh universal
 ```
 
+With Xcode 26 or later installed, packaging also compiles the adaptive Default/Dark app icon used by macOS 26. Command Line Tools or an older Xcode still produce a working app with the legacy static icon, but the release gate requires the adaptive icon.
+
 (A Homebrew cask is planned.)
 
 ## Development

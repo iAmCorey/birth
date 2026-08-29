@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${VERSION:-0.2.10}"
+VERSION="${VERSION:-0.2.11}"
 APP=dist/Birth.app
 BUILD_ARGS=(-c release)
 if [[ "${1:-}" == "universal" ]]; then
@@ -93,6 +93,41 @@ rm -rf "$ICONSET"
 swift scripts/generate-icon.swift "$ICONSET"
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 rm -rf "$ICONSET"
+
+# macOS 26 reads the layered Icon Composer representation from Assets.car.
+# Keep the generated ICNS above as the macOS 14/15 and toolchain fallback.
+ICON_SOURCE=Assets/AppIcon.icon
+ICON_OUTPUT=dist/AppIcon.compiled
+ICON_PLIST=dist/AppIcon.partial.plist
+ACTOOL="$(xcrun --find actool 2>/dev/null || true)"
+DEVELOPER_PATH="$(xcode-select -p 2>/dev/null || true)"
+ICON_COMPOSER=""
+if [ -n "$DEVELOPER_PATH" ]; then
+    ICON_COMPOSER="$(dirname "$DEVELOPER_PATH")/Applications/Icon Composer.app"
+fi
+rm -rf "$ICON_OUTPUT" "$ICON_PLIST"
+mkdir -p "$ICON_OUTPUT"
+if [ -z "$ACTOOL" ] || [ ! -d "$ICON_COMPOSER" ]; then
+    echo "WARNING: Xcode 26+ unavailable; packaged legacy ICNS only" >&2
+elif "$ACTOOL" "$ICON_SOURCE" \
+    --compile "$ICON_OUTPUT" \
+    --platform macosx \
+    --minimum-deployment-target 14.0 \
+    --target-device mac \
+    --app-icon AppIcon \
+    --standalone-icon-behavior none \
+    --output-partial-info-plist "$ICON_PLIST" \
+    --warnings --errors --notices \
+    --output-format human-readable-text; then
+    cp "$ICON_OUTPUT/Assets.car" "$APP/Contents/Resources/Assets.car"
+    plutil -insert CFBundleIconName -string AppIcon "$APP/Contents/Info.plist"
+    echo "    adaptive Default/Dark icon compiled"
+else
+    rm -rf "$ICON_OUTPUT" "$ICON_PLIST"
+    echo "ERROR: Xcode found, but adaptive icon compilation failed" >&2
+    exit 1
+fi
+rm -rf "$ICON_OUTPUT" "$ICON_PLIST"
 
 echo "==> ad-hoc signing"
 codesign --force --deep --sign - "$APP"

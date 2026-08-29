@@ -87,6 +87,8 @@ open dist/Birth.app
 ./scripts/make-app.sh universal
 ```
 
+安装 Xcode 26 或更高版本时，打包还会生成 macOS 26 使用的 Default/Dark 自适应应用图标。仅安装 Command Line Tools 或使用旧版 Xcode 仍可构建带传统静态图标的应用，但发版门禁会要求自适应图标存在。
+
 （Homebrew cask 计划中。）
 
 ## 开发
