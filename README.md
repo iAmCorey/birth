@@ -72,7 +72,27 @@ Download the latest `Birth-x.x.x.dmg` from [Releases](https://github.com/iAmCore
 
 Birth is a personal open-source project and is not notarized by Apple. On **first launch**, macOS will warn that the developer can't be verified: go to System Settings → Privacy & Security and click **"Open Anyway"** at the bottom of the page — once.
 
-### Option 2: Build from source
+### Option 2: Homebrew
+
+This repository also serves as the Homebrew tap:
+
+```bash
+brew tap iAmCorey/birth https://github.com/iAmCorey/birth.git
+brew install --cask iAmCorey/birth/birth
+```
+
+The cask installs the same universal DMG from the official releases. The first-launch guidance above also applies to Homebrew installations.
+
+To upgrade:
+
+```bash
+brew update
+brew upgrade --cask iAmCorey/birth/birth
+```
+
+After upgrading, re-grant Full Disk Access and Automation permissions in System Settings by toggling Birth off and back on.
+
+### Option 3: Build from source
 
 ```bash
 git clone https://github.com/iAmCorey/birth.git
@@ -89,8 +109,6 @@ By default this builds for your machine's architecture (arm64 on Apple Silicon, 
 
 With Xcode 26 or later installed, packaging also compiles the adaptive Default/Dark app icon used by macOS 26. Command Line Tools or an older Xcode still produce a working app with the legacy static icon, but the release gate requires the adaptive icon.
 
-(A Homebrew cask is planned.)
-
 ## Development
 
 ```bash
@@ -103,6 +121,12 @@ swift test                    # unit tests
 - Three targets: `BirthCore` (scanning/control/signing, UI-free), `BirthUI` (the whole app, testable), `Birth` (a three-line main)
 - `release-check.sh` must pass before every release — one red light and it doesn't ship
 
+### Homebrew releases
+
+The `Homebrew` GitHub Actions workflow verifies the latest stable release DMG, updates `Casks/birth.rb` in this repository, and runs Homebrew style and online audit checks before publishing the change to `main`. It runs when a stable release is published; **Run workflow** retries the latest stable release if the DMG was uploaded after publication. Publish releases with tags such as `v0.2.11` and upload the matching `Birth-0.2.11.dmg` before publishing.
+
+No separate tap repository or custom token is required. Validation uses read-only permissions; the publishing job uses this repository's automatic `GITHUB_TOKEN` with `contents: write`. PR runs validate the candidate cask without publishing. Concurrent cask edits are rejected rather than overwritten; retry the workflow if that happens.
+
 ## Notes & limitations
 
 - **The signing badge shows identity, not integrity**: Birth verifies certificate-chain anchors ("who signed this"); it does not hash the full bundle contents — that's Gatekeeper's job.
@@ -111,7 +135,9 @@ swift test                    # unit tests
 
 ## Uninstall
 
-Move Birth.app to the Trash. For a deeper clean (optional):
+Move Birth.app to the Trash, or run `brew uninstall --cask iAmCorey/birth/birth` if installed with Homebrew. Add `--zap` to also remove Birth's preferences; removal backups are preserved.
+
+For a deeper clean (optional):
 
 ```bash
 defaults delete dev.birth.Birth                            # preferences

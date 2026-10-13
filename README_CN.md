@@ -72,7 +72,27 @@ macOS 把启动项分散在至少四套机制里：
 
 Birth 是个人开源项目，未经 Apple 公证。**首次打开**时 macOS 会提示无法验证开发者：前往 系统设置 → 隐私与安全性，在页面底部点击**"仍要打开"**——只需一次。
 
-### 方式二：从源码构建
+### 方式二：Homebrew
+
+本仓库同时作为 Homebrew tap：
+
+```bash
+brew tap iAmCorey/birth https://github.com/iAmCorey/birth.git
+brew install --cask iAmCorey/birth/birth
+```
+
+Cask 安装的是官方 Releases 中同一个 universal 双架构 DMG。Homebrew 安装也适用上面的首次打开说明。
+
+升级：
+
+```bash
+brew update
+brew upgrade --cask iAmCorey/birth/birth
+```
+
+升级后，请在系统设置中重新授予完全磁盘访问权限与自动化授权（把 Birth 的开关先关后开）。
+
+### 方式三：从源码构建
 
 ```bash
 git clone https://github.com/iAmCorey/birth.git
@@ -89,8 +109,6 @@ open dist/Birth.app
 
 安装 Xcode 26 或更高版本时，打包还会生成 macOS 26 使用的 Default/Dark 自适应应用图标。仅安装 Command Line Tools 或使用旧版 Xcode 仍可构建带传统静态图标的应用，但发版门禁会要求自适应图标存在。
 
-（Homebrew cask 计划中。）
-
 ## 开发
 
 ```bash
@@ -103,6 +121,12 @@ swift test                    # 单元测试
 - 三个 target：`BirthCore`（扫描/控制/签名，UI 无关）、`BirthUI`（完整应用，可测试）、`Birth`（三行 main 的薄壳）
 - 每次发版前必须跑一遍 `release-check.sh`，任何一步红灯都不发布
 
+### Homebrew 发版
+
+`Homebrew` GitHub Actions 工作流会验证最新稳定版 DMG、更新本仓库的 `Casks/birth.rb`，并在通过 Homebrew 格式检查和在线审查后将更新发布到 `main`。发布稳定版时自动运行；如果发布后才上传 DMG，可通过 **Run workflow** 重试最新稳定版。版本标签使用 `v0.2.11` 这样的格式，并在发布前上传对应的 `Birth-0.2.11.dmg`。
+
+无需单独的 tap 仓库或自定义令牌。验证任务仅使用只读权限；发布任务使用本仓库自动提供的 `GITHUB_TOKEN`，权限为 `contents: write`。PR 运行只验证候选 cask，不发布。若 cask 在验证期间被并发修改，发布会失败而不会覆盖修改；此时重试工作流即可。
+
 ## 说明与限制
 
 - **签名徽章显示的是身份，不是完整性**：Birth 验证证书链锚点（确认"是谁签的"），不做全量内容哈希校验——那是 Gatekeeper 的职责。
@@ -111,7 +135,9 @@ swift test                    # 单元测试
 
 ## 卸载
 
-把 Birth.app 移到废纸篓即可。想清理得更彻底（可选）：
+把 Birth.app 移到废纸篓即可；如果通过 Homebrew 安装，使用 `brew uninstall --cask iAmCorey/birth/birth`。添加 `--zap` 可一并移除偏好设置；删除操作的备份会保留。
+
+想清理得更彻底（可选）：
 
 ```bash
 defaults delete dev.birth.Birth                            # 偏好设置

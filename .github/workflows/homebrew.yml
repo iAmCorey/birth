@@ -1,0 +1,106 @@
+name: Homebrew
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - Casks/birth.rb
+      - .github/workflows/homebrew.yml
+      - scripts/test-homebrew-workflow.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homebrew-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'release' }}
+  cancel-in-progress: false
+
+env:
+  HOMEBREW_NO_AUTO_UPDATE: 1
+
+jobs:
+  update-tap:
+    if: github.event_name != 'release' || !github.event.release.prerelease
+    runs-on: macos-15
+    timeout-minutes: 20
+    outputs:
+      changed: ${{ steps.cask.outputs.changed }}
+      content: ${{ steps.cask.outputs.content }}
+      original_sha: ${{ steps.cask.outputs.original_sha }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+          persist-credentials: false
+      - name: Test release metadata validation
+        run: python3 scripts/test-homebrew-workflow.py
+
+      - name: Verify the latest stable release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Always use latest, so delayed events cannot roll the tap back.
+          gh api repos/iAmCorey/birth/releases/latest > "$RUNNER_TEMP/release.json"
+          jq -e '.draft == false and .prerelease == false' "$RUNNER_TEMP/release.json" > /dev/null
+          version=$(jq -er '.tag_name | capture("^v(?<version>[0-9]+\\.[0-9]+\\.[0-9]+)$").version' "$RUNNER_TEMP/release.json")
+          asset=$(jq -ce --arg name "Birth-${version}.dmg" '.assets | map(select(.name == $name and .state == "uploaded")) | if length == 1 then .[0] else error("Expected exactly one release DMG") end' "$RUNNER_TEMP/release.json")
+          url=$(jq -er '.browser_download_url' <<< "$asset")
+          test "$url" = "https://github.com/iAmCorey/birth/releases/download/v${version}/Birth-${version}.dmg"
+          curl --fail --location --retry 3 --proto '=https' --proto-redir '=https' "$url" -o "$RUNNER_TEMP/Birth.dmg"
+          sha256=$(shasum -a 256 "$RUNNER_TEMP/Birth.dmg" | cut -d ' ' -f 1)
+          test "sha256:$sha256" = "$(jq -er '.digest' <<< "$asset")"
+          printf 'version=%s\nsha256=%s\n' "$version" "$sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Update and audit the cask
+        id: cask
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          SHA256: ${{ steps.release.outputs.sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          original_sha=$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD:Casks/birth.rb)
+          brew tap iAmCorey/birth "$GITHUB_WORKSPACE"
+          tap_repository=$(brew --repository iAmCorey/birth)
+          current=$(brew info --cask --json=v2 iAmCorey/birth/birth)
+          if ! jq -e --arg version "$VERSION" --arg sha256 "$SHA256" '.casks[0].version == $version and .casks[0].sha256 == $sha256' <<< "$current" > /dev/null; then
+            brew bump-cask-pr --write-only --no-audit --no-style --version "$VERSION" --sha256 "$SHA256" iAmCorey/birth/birth
+          fi
+          brew style --cask iAmCorey/birth/birth
+          brew audit --cask --strict --online iAmCorey/birth/birth
+          if git -C "$tap_repository" diff --quiet -- Casks/birth.rb; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo 'changed=true'
+              printf 'original_sha=%s\n' "$original_sha"
+              printf 'content=%s\n' "$(base64 < "$tap_repository/Casks/birth.rb" | tr -d '\r\n')"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    needs: update-tap
+    if: needs.update-tap.outputs.changed == 'true' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Update this repository's cask
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.update-tap.outputs.version }}
+          CONTENT: ${{ needs.update-tap.outputs.content }}
+          ORIGINAL_SHA: ${{ needs.update-tap.outputs.original_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The original blob SHA rejects concurrent cask edits instead of overwriting them.
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/Casks/birth.rb" \
+            -f message="birth ${VERSION}" -f content="$CONTENT" \
+            -f sha="$ORIGINAL_SHA" -f branch=main --jq .commit.html_url
