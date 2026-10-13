@@ -72,7 +72,26 @@ Download the latest `Birth-x.x.x.dmg` from [Releases](https://github.com/iAmCore
 
 Birth is a personal open-source project and is not notarized by Apple. On **first launch**, macOS will warn that the developer can't be verified: go to System Settings → Privacy & Security and click **"Open Anyway"** at the bottom of the page — once.
 
-### Option 2: Build from source
+### Option 2: Homebrew
+
+Install from the community-maintained [Homebrew tap](https://github.com/le0-VV/homebrew-birth):
+
+```bash
+brew install --cask le0-VV/birth/birth
+```
+
+The cask installs the same universal DMG from the official releases. The first-launch guidance above also applies to Homebrew installations.
+
+To upgrade:
+
+```bash
+brew update
+brew upgrade --cask le0-VV/birth/birth
+```
+
+After upgrading, re-grant Full Disk Access and Automation permissions in System Settings by toggling Birth off and back on.
+
+### Option 3: Build from source
 
 ```bash
 git clone https://github.com/iAmCorey/birth.git
@@ -88,8 +107,6 @@ By default this builds for your machine's architecture (arm64 on Apple Silicon, 
 ```
 
 With Xcode 26 or later installed, packaging also compiles the adaptive Default/Dark app icon used by macOS 26. Command Line Tools or an older Xcode still produce a working app with the legacy static icon, but the release gate requires the adaptive icon.
-
-(A Homebrew cask is planned.)
 
 ## Development
 
@@ -111,7 +128,9 @@ swift test                    # unit tests
 
 ## Uninstall
 
-Move Birth.app to the Trash. For a deeper clean (optional):
+Move Birth.app to the Trash, or run `brew uninstall --cask le0-VV/birth/birth` if installed with Homebrew. Add `--zap` to also remove Birth's preferences; removal backups are preserved.
+
+For a deeper clean (optional):
 
 ```bash
 defaults delete dev.birth.Birth                            # preferences

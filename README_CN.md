@@ -72,7 +72,26 @@ macOS 把启动项分散在至少四套机制里：
 
 Birth 是个人开源项目，未经 Apple 公证。**首次打开**时 macOS 会提示无法验证开发者：前往 系统设置 → 隐私与安全性，在页面底部点击**"仍要打开"**——只需一次。
 
-### 方式二：从源码构建
+### 方式二：Homebrew
+
+通过社区维护的 [Homebrew tap](https://github.com/le0-VV/homebrew-birth) 安装：
+
+```bash
+brew install --cask le0-VV/birth/birth
+```
+
+Cask 安装的是官方 Releases 中同一个 universal 双架构 DMG。Homebrew 安装也适用上面的首次打开说明。
+
+升级：
+
+```bash
+brew update
+brew upgrade --cask le0-VV/birth/birth
+```
+
+升级后，请在系统设置中重新授予完全磁盘访问权限与自动化授权（把 Birth 的开关先关后开）。
+
+### 方式三：从源码构建
 
 ```bash
 git clone https://github.com/iAmCorey/birth.git
@@ -88,8 +107,6 @@ open dist/Birth.app
 ```
 
 安装 Xcode 26 或更高版本时，打包还会生成 macOS 26 使用的 Default/Dark 自适应应用图标。仅安装 Command Line Tools 或使用旧版 Xcode 仍可构建带传统静态图标的应用，但发版门禁会要求自适应图标存在。
-
-（Homebrew cask 计划中。）
 
 ## 开发
 
@@ -111,7 +128,9 @@ swift test                    # 单元测试
 
 ## 卸载
 
-把 Birth.app 移到废纸篓即可。想清理得更彻底（可选）：
+把 Birth.app 移到废纸篓即可；如果通过 Homebrew 安装，使用 `brew uninstall --cask le0-VV/birth/birth`。添加 `--zap` 可一并移除偏好设置；删除操作的备份会保留。
+
+想清理得更彻底（可选）：
 
 ```bash
 defaults delete dev.birth.Birth                            # 偏好设置
