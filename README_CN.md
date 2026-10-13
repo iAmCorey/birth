@@ -120,6 +120,12 @@ swift test                    # 单元测试
 - 三个 target：`BirthCore`（扫描/控制/签名，UI 无关）、`BirthUI`（完整应用，可测试）、`Birth`（三行 main 的薄壳）
 - 每次发版前必须跑一遍 `release-check.sh`，任何一步红灯都不发布
 
+### Homebrew 发版
+
+`Homebrew` GitHub Actions 工作流会验证最新稳定版 DMG、更新社区 tap 的版本与 SHA-256、运行 Homebrew 格式检查和在线审查，然后推送 cask 更新。发布稳定版时自动运行；如果发布后才上传 DMG，可通过 **Run workflow** 重试最新稳定版。版本标签使用 `v0.2.11` 这样的格式，并在发布前上传对应的 `Birth-0.2.11.dmg`。
+
+启用自动推送需要 tap 所有者提供仅对 `le0-VV/homebrew-birth` 仓库具有 **Contents: read and write** 权限的细粒度令牌，由上游维护者保存为仓库 Actions secret `HOMEBREW_TAP_TOKEN`。默认的 `GITHUB_TOKEN` 无法写入其他仓库。PR 运行只验证更新，不推送，也不使用 tap 令牌。
+
 ## 说明与限制
 
 - **签名徽章显示的是身份，不是完整性**：Birth 验证证书链锚点（确认"是谁签的"），不做全量内容哈希校验——那是 Gatekeeper 的职责。

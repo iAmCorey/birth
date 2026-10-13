@@ -120,6 +120,12 @@ swift test                    # unit tests
 - Three targets: `BirthCore` (scanning/control/signing, UI-free), `BirthUI` (the whole app, testable), `Birth` (a three-line main)
 - `release-check.sh` must pass before every release — one red light and it doesn't ship
 
+### Homebrew releases
+
+The `Homebrew` GitHub Actions workflow verifies the latest stable release DMG, updates the community tap's version and SHA-256, runs Homebrew style and online audit checks, and pushes the cask update. It runs when a stable release is published; **Run workflow** retries the latest stable release if the DMG was uploaded after publication. Publish releases with tags such as `v0.2.11` and upload the matching `Birth-0.2.11.dmg` before publishing.
+
+To enable publishing, the tap owner must provide a fine-grained token with **Contents: read and write** access only to `le0-VV/homebrew-birth`. An upstream maintainer must store it as the repository Actions secret `HOMEBREW_TAP_TOKEN`. The default `GITHUB_TOKEN` cannot write to another repository. PR runs validate the update without publishing or using the tap token.
+
 ## Notes & limitations
 
 - **The signing badge shows identity, not integrity**: Birth verifies certificate-chain anchors ("who signed this"); it does not hash the full bundle contents — that's Gatekeeper's job.

@@ -1,0 +1,93 @@
+name: Homebrew
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - Casks/birth.rb
+      - .github/workflows/homebrew.yml
+      - scripts/test-homebrew-workflow.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homebrew-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'release' }}
+  cancel-in-progress: false
+
+env:
+  HOMEBREW_NO_AUTO_UPDATE: 1
+
+jobs:
+  update-tap:
+    if: github.event_name != 'release' || !github.event.release.prerelease
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test release metadata validation
+        run: python3 scripts/test-homebrew-workflow.py
+
+      - name: Verify the latest stable release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Always use latest, so delayed events cannot roll the tap back.
+          gh api repos/iAmCorey/birth/releases/latest > "$RUNNER_TEMP/release.json"
+          jq -e '.draft == false and .prerelease == false' "$RUNNER_TEMP/release.json" > /dev/null
+          version=$(jq -er '.tag_name | capture("^v(?<version>[0-9]+\\.[0-9]+\\.[0-9]+)$").version' "$RUNNER_TEMP/release.json")
+          asset=$(jq -ce --arg name "Birth-${version}.dmg" '.assets | map(select(.name == $name and .state == "uploaded")) | if length == 1 then .[0] else error("Expected exactly one release DMG") end' "$RUNNER_TEMP/release.json")
+          url=$(jq -er '.browser_download_url' <<< "$asset")
+          test "$url" = "https://github.com/iAmCorey/birth/releases/download/v${version}/Birth-${version}.dmg"
+          curl --fail --location --retry 3 --proto '=https' --proto-redir '=https' "$url" -o "$RUNNER_TEMP/Birth.dmg"
+          sha256=$(shasum -a 256 "$RUNNER_TEMP/Birth.dmg" | cut -d ' ' -f 1)
+          test "sha256:$sha256" = "$(jq -er '.digest' <<< "$asset")"
+          printf 'version=%s\nsha256=%s\n' "$version" "$sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Update and audit the cask
+        id: cask
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          SHA256: ${{ steps.release.outputs.sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew tap le0-VV/birth
+          tap_repository=$(brew --repository le0-VV/birth)
+          if [[ "$GITHUB_EVENT_NAME" == 'pull_request' ]]; then
+            cp "$GITHUB_WORKSPACE/Casks/birth.rb" "$tap_repository/Casks/birth.rb"
+          fi
+          current=$(brew info --cask --json=v2 le0-VV/birth/birth)
+          if ! jq -e --arg version "$VERSION" --arg sha256 "$SHA256" '.casks[0].version == $version and .casks[0].sha256 == $sha256' <<< "$current" > /dev/null; then
+            brew bump-cask-pr --write-only --no-audit --no-style --version "$VERSION" --sha256 "$SHA256" le0-VV/birth/birth
+          fi
+          brew style --cask le0-VV/birth/birth
+          brew audit --cask --strict --online le0-VV/birth/birth
+          if git -C "$tap_repository" diff --quiet -- Casks/birth.rb; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish the tap update
+        if: steps.cask.outputs.changed == 'true' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${GH_TOKEN:?Set HOMEBREW_TAP_TOKEN with Contents write access to le0-VV/homebrew-birth}"
+          tap_repository=$(brew --repository le0-VV/birth)
+          git -C "$tap_repository" config user.name 'github-actions[bot]'
+          git -C "$tap_repository" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C "$tap_repository" add Casks/birth.rb
+          git -C "$tap_repository" commit -m "birth ${VERSION}"
+          git -C "$tap_repository" -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin HEAD:main
