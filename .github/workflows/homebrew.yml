@@ -25,9 +25,15 @@ jobs:
     if: github.event_name != 'release' || !github.event.release.prerelease
     runs-on: macos-15
     timeout-minutes: 20
+    outputs:
+      changed: ${{ steps.cask.outputs.changed }}
+      content: ${{ steps.cask.outputs.content }}
+      original_sha: ${{ steps.cask.outputs.original_sha }}
+      version: ${{ steps.release.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'pull_request' && github.ref || 'main' }}
           persist-credentials: false
       - name: Test release metadata validation
         run: python3 scripts/test-homebrew-workflow.py
@@ -59,35 +65,42 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          brew tap le0-VV/birth
-          tap_repository=$(brew --repository le0-VV/birth)
-          if [[ "$GITHUB_EVENT_NAME" == 'pull_request' ]]; then
-            cp "$GITHUB_WORKSPACE/Casks/birth.rb" "$tap_repository/Casks/birth.rb"
-          fi
-          current=$(brew info --cask --json=v2 le0-VV/birth/birth)
+          original_sha=$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD:Casks/birth.rb)
+          brew tap iAmCorey/birth "$GITHUB_WORKSPACE"
+          tap_repository=$(brew --repository iAmCorey/birth)
+          current=$(brew info --cask --json=v2 iAmCorey/birth/birth)
           if ! jq -e --arg version "$VERSION" --arg sha256 "$SHA256" '.casks[0].version == $version and .casks[0].sha256 == $sha256' <<< "$current" > /dev/null; then
-            brew bump-cask-pr --write-only --no-audit --no-style --version "$VERSION" --sha256 "$SHA256" le0-VV/birth/birth
+            brew bump-cask-pr --write-only --no-audit --no-style --version "$VERSION" --sha256 "$SHA256" iAmCorey/birth/birth
           fi
-          brew style --cask le0-VV/birth/birth
-          brew audit --cask --strict --online le0-VV/birth/birth
+          brew style --cask iAmCorey/birth/birth
+          brew audit --cask --strict --online iAmCorey/birth/birth
           if git -C "$tap_repository" diff --quiet -- Casks/birth.rb; then
             echo 'changed=false' >> "$GITHUB_OUTPUT"
           else
-            echo 'changed=true' >> "$GITHUB_OUTPUT"
+            {
+              echo 'changed=true'
+              printf 'original_sha=%s\n' "$original_sha"
+              printf 'content=%s\n' "$(base64 < "$tap_repository/Casks/birth.rb" | tr -d '\r\n')"
+            } >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Publish the tap update
-        if: steps.cask.outputs.changed == 'true' && github.event_name != 'pull_request'
+  publish:
+    needs: update-tap
+    if: needs.update-tap.outputs.changed == 'true' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Update this repository's cask
         env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          VERSION: ${{ steps.release.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.update-tap.outputs.version }}
+          CONTENT: ${{ needs.update-tap.outputs.content }}
+          ORIGINAL_SHA: ${{ needs.update-tap.outputs.original_sha }}
         shell: bash
         run: |
           set -euo pipefail
-          : "${GH_TOKEN:?Set HOMEBREW_TAP_TOKEN with Contents write access to le0-VV/homebrew-birth}"
-          tap_repository=$(brew --repository le0-VV/birth)
-          git -C "$tap_repository" config user.name 'github-actions[bot]'
-          git -C "$tap_repository" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git -C "$tap_repository" add Casks/birth.rb
-          git -C "$tap_repository" commit -m "birth ${VERSION}"
-          git -C "$tap_repository" -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin HEAD:main
+          # The original blob SHA rejects concurrent cask edits instead of overwriting them.
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/Casks/birth.rb" \
+            -f message="birth ${VERSION}" -f content="$CONTENT" \
+            -f sha="$ORIGINAL_SHA" -f branch=main --jq .commit.html_url

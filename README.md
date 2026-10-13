@@ -74,10 +74,11 @@ Birth is a personal open-source project and is not notarized by Apple. On **firs
 
 ### Option 2: Homebrew
 
-Install from the community-maintained [Homebrew tap](https://github.com/le0-VV/homebrew-birth):
+This repository also serves as the Homebrew tap:
 
 ```bash
-brew install --cask le0-VV/birth/birth
+brew tap iAmCorey/birth https://github.com/iAmCorey/birth.git
+brew install --cask iAmCorey/birth/birth
 ```
 
 The cask installs the same universal DMG from the official releases. The first-launch guidance above also applies to Homebrew installations.
@@ -86,7 +87,7 @@ To upgrade:
 
 ```bash
 brew update
-brew upgrade --cask le0-VV/birth/birth
+brew upgrade --cask iAmCorey/birth/birth
 ```
 
 After upgrading, re-grant Full Disk Access and Automation permissions in System Settings by toggling Birth off and back on.
@@ -122,9 +123,9 @@ swift test                    # unit tests
 
 ### Homebrew releases
 
-The `Homebrew` GitHub Actions workflow verifies the latest stable release DMG, updates the community tap's version and SHA-256, runs Homebrew style and online audit checks, and pushes the cask update. It runs when a stable release is published; **Run workflow** retries the latest stable release if the DMG was uploaded after publication. Publish releases with tags such as `v0.2.11` and upload the matching `Birth-0.2.11.dmg` before publishing.
+The `Homebrew` GitHub Actions workflow verifies the latest stable release DMG, updates `Casks/birth.rb` in this repository, and runs Homebrew style and online audit checks before publishing the change to `main`. It runs when a stable release is published; **Run workflow** retries the latest stable release if the DMG was uploaded after publication. Publish releases with tags such as `v0.2.11` and upload the matching `Birth-0.2.11.dmg` before publishing.
 
-To enable publishing, the tap owner must provide a fine-grained token with **Contents: read and write** access only to `le0-VV/homebrew-birth`. An upstream maintainer must store it as the repository Actions secret `HOMEBREW_TAP_TOKEN`. The default `GITHUB_TOKEN` cannot write to another repository. PR runs validate the update without publishing or using the tap token.
+No separate tap repository or custom token is required. Validation uses read-only permissions; the publishing job uses this repository's automatic `GITHUB_TOKEN` with `contents: write`. PR runs validate the candidate cask without publishing. Concurrent cask edits are rejected rather than overwritten; retry the workflow if that happens.
 
 ## Notes & limitations
 
@@ -134,7 +135,7 @@ To enable publishing, the tap owner must provide a fine-grained token with **Con
 
 ## Uninstall
 
-Move Birth.app to the Trash, or run `brew uninstall --cask le0-VV/birth/birth` if installed with Homebrew. Add `--zap` to also remove Birth's preferences; removal backups are preserved.
+Move Birth.app to the Trash, or run `brew uninstall --cask iAmCorey/birth/birth` if installed with Homebrew. Add `--zap` to also remove Birth's preferences; removal backups are preserved.
 
 For a deeper clean (optional):
 

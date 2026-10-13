@@ -74,10 +74,11 @@ Birth 是个人开源项目，未经 Apple 公证。**首次打开**时 macOS �
 
 ### 方式二：Homebrew
 
-通过社区维护的 [Homebrew tap](https://github.com/le0-VV/homebrew-birth) 安装：
+本仓库同时作为 Homebrew tap：
 
 ```bash
-brew install --cask le0-VV/birth/birth
+brew tap iAmCorey/birth https://github.com/iAmCorey/birth.git
+brew install --cask iAmCorey/birth/birth
 ```
 
 Cask 安装的是官方 Releases 中同一个 universal 双架构 DMG。Homebrew 安装也适用上面的首次打开说明。
@@ -86,7 +87,7 @@ Cask 安装的是官方 Releases 中同一个 universal 双架构 DMG。Homebrew
 
 ```bash
 brew update
-brew upgrade --cask le0-VV/birth/birth
+brew upgrade --cask iAmCorey/birth/birth
 ```
 
 升级后，请在系统设置中重新授予完全磁盘访问权限与自动化授权（把 Birth 的开关先关后开）。
@@ -122,9 +123,9 @@ swift test                    # 单元测试
 
 ### Homebrew 发版
 
-`Homebrew` GitHub Actions 工作流会验证最新稳定版 DMG、更新社区 tap 的版本与 SHA-256、运行 Homebrew 格式检查和在线审查，然后推送 cask 更新。发布稳定版时自动运行；如果发布后才上传 DMG，可通过 **Run workflow** 重试最新稳定版。版本标签使用 `v0.2.11` 这样的格式，并在发布前上传对应的 `Birth-0.2.11.dmg`。
+`Homebrew` GitHub Actions 工作流会验证最新稳定版 DMG、更新本仓库的 `Casks/birth.rb`，并在通过 Homebrew 格式检查和在线审查后将更新发布到 `main`。发布稳定版时自动运行；如果发布后才上传 DMG，可通过 **Run workflow** 重试最新稳定版。版本标签使用 `v0.2.11` 这样的格式，并在发布前上传对应的 `Birth-0.2.11.dmg`。
 
-启用自动推送需要 tap 所有者提供仅对 `le0-VV/homebrew-birth` 仓库具有 **Contents: read and write** 权限的细粒度令牌，由上游维护者保存为仓库 Actions secret `HOMEBREW_TAP_TOKEN`。默认的 `GITHUB_TOKEN` 无法写入其他仓库。PR 运行只验证更新，不推送，也不使用 tap 令牌。
+无需单独的 tap 仓库或自定义令牌。验证任务仅使用只读权限；发布任务使用本仓库自动提供的 `GITHUB_TOKEN`，权限为 `contents: write`。PR 运行只验证候选 cask，不发布。若 cask 在验证期间被并发修改，发布会失败而不会覆盖修改；此时重试工作流即可。
 
 ## 说明与限制
 
@@ -134,7 +135,7 @@ swift test                    # 单元测试
 
 ## 卸载
 
-把 Birth.app 移到废纸篓即可；如果通过 Homebrew 安装，使用 `brew uninstall --cask le0-VV/birth/birth`。添加 `--zap` 可一并移除偏好设置；删除操作的备份会保留。
+把 Birth.app 移到废纸篓即可；如果通过 Homebrew 安装，使用 `brew uninstall --cask iAmCorey/birth/birth`。添加 `--zap` 可一并移除偏好设置；删除操作的备份会保留。
 
 想清理得更彻底（可选）：
 

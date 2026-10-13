@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Exercise the workflow's release validation without network access."""
+"""Exercise Homebrew validation and publishing contracts without network access."""
+import base64
 import copy
 import hashlib
 import json
@@ -17,6 +18,16 @@ class ReleaseValidationTests(unittest.TestCase):
         cls.script = subprocess.check_output([
             'ruby', '-ryaml', '-e',
             'puts YAML.load_file(ARGV[0]).fetch("jobs").fetch("update-tap").fetch("steps").find { |step| step["id"] == "release" }.fetch("run")',
+            str(workflow),
+        ], text=True)
+        cls.publish_script = subprocess.check_output([
+            'ruby', '-ryaml', '-e',
+            'puts YAML.load_file(ARGV[0]).fetch("jobs").fetch("publish").fetch("steps").first.fetch("run")',
+            str(workflow),
+        ], text=True)
+        cls.cask_script = subprocess.check_output([
+            'ruby', '-ryaml', '-e',
+            'puts YAML.load_file(ARGV[0]).fetch("jobs").fetch("update-tap").fetch("steps").find { |step| step["id"] == "cask" }.fetch("run")',
             str(workflow),
         ], text=True)
 
@@ -80,6 +91,39 @@ class ReleaseValidationTests(unittest.TestCase):
                 result, output = self.run_release(release)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(output, '')
+
+    def test_publishing_targets_this_repository_and_preserves_blob_guard(self):
+        arguments = self.root / 'arguments'
+        (self.root / 'gh').write_text('#!/bin/bash\nprintf "%s\\n" "$@" > "$GH_ARGUMENTS"\n')
+        result = subprocess.run(['bash', '-c', self.publish_script], text=True, capture_output=True, env={
+            **os.environ,
+            'PATH': str(self.root) + os.pathsep + os.environ['PATH'],
+            'GITHUB_REPOSITORY': 'maintainer/birth', 'GH_TOKEN': 'automatic-workflow-token',
+            'GH_ARGUMENTS': str(arguments), 'VERSION': '0.2.11',
+            'CONTENT': 'validated-base64-cask', 'ORIGINAL_SHA': 'original-cask-blob',
+        })
+        self.assertEqual(result.returncode, 0, result.stderr)
+        passed = arguments.read_text().splitlines()
+        self.assertIn('repos/maintainer/birth/contents/Casks/birth.rb', passed)
+        self.assertIn('sha=original-cask-blob', passed)
+        self.assertIn('content=validated-base64-cask', passed)
+        self.assertIn('branch=main', passed)
+
+    def test_cask_content_output_handles_crlf_base64_wrapping(self):
+        cask = self.root / 'Casks/birth.rb'
+        cask.parent.mkdir()
+        cask.write_bytes(b'validated cask content\n')
+        encoder = self.root / 'base64'
+        encoder.write_text("#!/usr/bin/env python3\nimport base64, sys, textwrap\nsys.stdout.write('\\r\\n'.join(textwrap.wrap(base64.b64encode(sys.stdin.buffer.read()).decode(), 12)) + '\\r\\n')\n")
+        encoder.chmod(0o755)
+        formatter = next(line.strip() for line in self.cask_script.splitlines() if "printf 'content=" in line)
+        result = subprocess.run(['bash', '-c', formatter], text=True, capture_output=True, env={
+            **os.environ,
+            'PATH': str(self.root) + os.pathsep + os.environ['PATH'],
+            'tap_repository': str(self.root),
+        })
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, 'content=' + base64.b64encode(cask.read_bytes()).decode() + '\n')
 
 
 if __name__ == '__main__':
