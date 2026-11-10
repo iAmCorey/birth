@@ -1,0 +1,20 @@
+/* BirthCore — Français. Keys are semantic; keep in lockstep with en. */
+
+"core.enable" = "activer";
+"core.disable" = "désactiver";
+"prompt.setEnabled" = "Birth souhaite %1$@ l’élément de démarrage « %2$@ ».";
+"prompt.remove" = "Birth souhaite supprimer l’élément de démarrage « %@ ».";
+"error.authCanceled" = "L’autorisation administrateur a été annulée.";
+"error.launchctlFailed" = "Échec de launchctl %1$@ : %2$@";
+"error.disabledStillRunning" = "Désactivé, mais le processus de la tâche est toujours en cours d’exécution ; il s’arrêtera complètement après une déconnexion ou un redémarrage.";
+"error.persistFailed" = "Impossible d’enregistrer l’état d’activation persistant ; aucune modification n’a été effectuée.";
+"error.loginItemsManaged" = "Les éléments d’ouverture sont gérés par macOS. Modifiez-les dans Réglages Système > Général > Ouverture et extensions.";
+"error.itemManaged" = "Cet élément est géré par macOS. Modifiez-le dans Réglages Système > Général > Ouverture et extensions.";
+"error.removedStillRunning" = "Supprimé, mais le processus de la tâche est toujours en cours d’exécution ; il s’arrêtera complètement après une déconnexion ou un redémarrage.";
+"error.trashFailed" = "Impossible de placer le fichier plist dans la corbeille (erreur d’autorisation ou de disque) ; aucune modification n’a été effectuée.";
+"error.fdaNeeded" = "Impossible de lire la base de données des éléments d’ouverture. Accordez à Birth l’accès complet au disque dans Réglages Système > Confidentialité et sécurité.";
+"error.btmUnavailable" = "La base de données des éléments d’ouverture de macOS est temporairement indisponible.";
+"error.btmUnsupported" = "Cette version de macOS utilise un format de base de données des éléments d’ouverture que Birth ne prend pas encore en charge.";
+"error.btmAccount" = "Birth n’a pas pu associer la base de données des éléments d’ouverture au compte macOS actuel.";
+"error.automationDenied" = "Birth n’est pas autorisé à contrôler System Events. Autorisez Birth dans Réglages Système > Confidentialité et sécurité > Automatisation.";
+"error.timeout" = "%1$@ ne s’est pas terminé en %2$lld secondes et a été arrêté de force.";

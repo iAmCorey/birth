@@ -41,7 +41,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key>
-    <string>zh-Hans</string>
+    <string>en</string>
     <key>CFBundleExecutable</key>
     <string>Birth</string>
     <key>CFBundleIdentifier</key>
@@ -67,24 +67,42 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>NSHumanReadableCopyright</key>
     <string>MIT License</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Birth 需要通过“系统事件”来添加和移除登录时打开的 App。</string>
+    <string>Birth needs to control System Events to add and remove apps that open at login.</string>
     <key>CFBundleLocalizations</key>
     <array>
-        <string>zh-Hans</string>
         <string>en</string>
+        <string>de</string>
+        <string>es</string>
+        <string>fr</string>
+        <string>ja</string>
+        <string>zh-Hans</string>
     </array>
 </dict>
 </plist>
 PLIST
 
-# Declare both localizations so framework-provided strings (menu bar,
-# standard dialog buttons) follow the app's language, not just Chinese.
-mkdir -p "$APP/Contents/Resources/zh-Hans.lproj" "$APP/Contents/Resources/en.lproj"
+# Declare every localization so framework-provided strings (menu bar,
+# standard dialog buttons) follow the app's language.
+for lang in en de es fr ja zh-Hans; do
+    mkdir -p "$APP/Contents/Resources/$lang.lproj"
+done
 
-# TCC usage strings follow the app language too; the Chinese original
+# TCC usage strings follow the app language too; the English original
 # lives in Info.plist itself (the development-region fallback).
-cat > "$APP/Contents/Resources/en.lproj/InfoPlist.strings" <<'STRINGS'
-"NSAppleEventsUsageDescription" = "Birth needs to control System Events to add and remove apps that open at login.";
+cat > "$APP/Contents/Resources/de.lproj/InfoPlist.strings" <<'STRINGS'
+"NSAppleEventsUsageDescription" = "Birth muss „System Events“ steuern, um Apps hinzuzufügen und zu entfernen, die bei der Anmeldung geöffnet werden.";
+STRINGS
+cat > "$APP/Contents/Resources/es.lproj/InfoPlist.strings" <<'STRINGS'
+"NSAppleEventsUsageDescription" = "Birth necesita controlar Eventos del Sistema para añadir y eliminar las apps que se abren al iniciar sesión.";
+STRINGS
+cat > "$APP/Contents/Resources/fr.lproj/InfoPlist.strings" <<'STRINGS'
+"NSAppleEventsUsageDescription" = "Birth doit contrôler Événements Système pour ajouter et supprimer les apps ouvertes à l’ouverture de session.";
+STRINGS
+cat > "$APP/Contents/Resources/ja.lproj/InfoPlist.strings" <<'STRINGS'
+"NSAppleEventsUsageDescription" = "Birth はログイン時に開く App を追加・削除するために「システムイベント」を制御する必要があります。";
+STRINGS
+cat > "$APP/Contents/Resources/zh-Hans.lproj/InfoPlist.strings" <<'STRINGS'
+"NSAppleEventsUsageDescription" = "Birth 需要通过“系统事件”来添加和移除登录时打开的 App。";
 STRINGS
 
 echo "==> rendering icon"

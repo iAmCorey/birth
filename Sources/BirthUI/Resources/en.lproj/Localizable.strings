@@ -152,3 +152,6 @@
 "badge.masqueradeHelp" = "The identifier claims Apple (com.apple.*), but the signature disproves it — a common malware disguise. Actual signature: %@";
 "badge.untrustedHelp" = "This executable has no recognizable developer signature";
 "settings.relaunchFailed" = "Couldn't launch a new instance — please reopen Birth manually.";
+"about.copyright" = "© %1$@ %2$@. All rights reserved.";
+"about.builtBy" = "Built with ❤️ by ";
+"settings.language" = "Language";

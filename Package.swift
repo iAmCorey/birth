@@ -3,12 +3,12 @@ import PackageDescription
 
 let package = Package(
     name: "birth",
-    // zh-Hans is the product's source language: it is the resource
-    // bundles' development region, so systems preferring neither zh-Hans
-    // nor en fall back to Chinese. Both languages ship as full semantic-
-    // key .strings tables; a missing key renders as the raw key, which
-    // the key-set completeness test exists to prevent.
-    defaultLocalization: "zh-Hans",
+    // English is the resource bundles' development region, so systems
+    // preferring none of the shipped languages (en, de, zh-Hans) fall back
+    // to English. Every language ships as a full semantic-key .strings
+    // table; a missing key renders as the raw key, which the key-set
+    // completeness test exists to prevent.
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v14)
     ],

@@ -62,6 +62,12 @@ macOS 把启动项分散在至少四套机制里：
 
 缺少权限时功能优雅降级：界面内有一次性授权引导，授权后切回 Birth 自动刷新，之后所有操作静默进行。
 
+## 语言
+
+Birth 支持 English、Deutsch、Español、Français、日本語 和简体中文，会自动跟随 macOS 系统语言，其他语言则回退到英文。如需手动指定，可在 **Birth → 设置…（⌘,）** 中选择语言，Birth 会重启以生效。
+
+翻译文件位于 `Sources/BirthUI/Resources/<lang>.lproj` 和 `Sources/BirthCore/Resources/<lang>.lproj`。新增语言时，复制 `en.lproj` 中的表格进行翻译，并在 `AppState.AppLanguage` 中添加对应的 case；本地化测试会检查所有表格的键和格式说明符是否一致。
+
 ## 安装
 
 要求 macOS 14（Sonoma）及以上。目前主要在 macOS 26 上开发与测试；更早版本遇到问题欢迎提 [Issue](https://github.com/iAmCorey/birth/issues)。
