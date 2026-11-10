@@ -15,12 +15,16 @@ struct SettingsView: View {
                     Text(verbatim: "简体中文").tag(AppState.AppLanguage.chinese)
                     Text(verbatim: "English").tag(AppState.AppLanguage.english)
                     Text(verbatim: "Deutsch").tag(AppState.AppLanguage.german)
+                    Text(verbatim: "Español").tag(AppState.AppLanguage.spanish)
+                    Text(verbatim: "Français").tag(AppState.AppLanguage.french)
+                    Text(verbatim: "日本語").tag(AppState.AppLanguage.japanese)
                 } label: {
                     // Bilingual on purpose — the language row must be
-                    // readable no matter which language is showing. Plain
-                    // SF Symbol, matching the main window's icon language.
+                    // readable no matter which language is showing: always
+                    // "Language", plus the current language's own word.
+                    // Plain SF Symbol, matching the main window's icon language.
                     Label {
-                        Text(verbatim: "Language / Sprache / 语言")
+                        Text(verbatim: languageLabel)
                     } icon: {
                         Image(systemName: "globe")
                     }
@@ -58,6 +62,9 @@ struct SettingsView: View {
         switch targetLanguage {
         case .chinese: "语言切换将在重启 Birth 后生效。"
         case .german: "Die Sprachänderung wird nach einem Neustart von Birth wirksam."
+        case .french: "Le changement de langue prendra effet après le redémarrage de Birth."
+        case .spanish: "El cambio de idioma se aplicará cuando se reinicie Birth."
+        case .japanese: "言語の変更は Birth の再起動後に反映されます。"
         case .english, .system: "The language change takes effect after Birth restarts."
         }
     }
@@ -66,7 +73,15 @@ struct SettingsView: View {
         switch targetLanguage {
         case .chinese: "立即重启"
         case .german: "Jetzt neu starten"
+        case .french: "Redémarrer maintenant"
+        case .spanish: "Reiniciar ahora"
+        case .japanese: "今すぐ再起動"
         case .english, .system: "Restart Now"
         }
+    }
+
+    private var languageLabel: String {
+        let local = L("settings.language")
+        return local == "Language" ? local : "Language / \(local)"
     }
 }

@@ -152,3 +152,6 @@
 "badge.masqueradeHelp" = "Die Kennung behauptet, von Apple zu stammen (com.apple.*), aber die Signatur widerlegt das – eine häufige Tarnung von Schadsoftware. Tatsächliche Signatur: %@";
 "badge.untrustedHelp" = "Diese Programmdatei hat keine erkennbare Entwicklersignatur";
 "settings.relaunchFailed" = "Neue Instanz konnte nicht gestartet werden – bitte öffne Birth manuell erneut.";
+"about.copyright" = "© %1$@ %2$@. Alle Rechte vorbehalten.";
+"about.builtBy" = "Mit ❤️ entwickelt von ";
+"settings.language" = "Sprache";

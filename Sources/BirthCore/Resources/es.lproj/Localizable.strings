@@ -1,0 +1,20 @@
+/* BirthCore — Español. Keys are semantic; keep in lockstep with en. */
+
+"core.enable" = "activar";
+"core.disable" = "desactivar";
+"prompt.setEnabled" = "Birth quiere %1$@ el elemento de arranque “%2$@”.";
+"prompt.remove" = "Birth quiere eliminar el elemento de arranque “%@”.";
+"error.authCanceled" = "Se ha cancelado la autorización de administrador.";
+"error.launchctlFailed" = "launchctl %1$@ ha fallado: %2$@";
+"error.disabledStillRunning" = "Desactivado, pero el proceso sigue en ejecución; se detendrá por completo al cerrar sesión o reiniciar.";
+"error.persistFailed" = "No se ha podido guardar el estado de activación permanente; no se ha cambiado nada.";
+"error.loginItemsManaged" = "macOS gestiona los ítems de inicio. Cámbialos en Ajustes del Sistema > General > Ítems de inicio y extensiones.";
+"error.itemManaged" = "macOS gestiona este ítem. Cámbialo en Ajustes del Sistema > General > Ítems de inicio y extensiones.";
+"error.removedStillRunning" = "Eliminado, pero el proceso sigue en ejecución; se detendrá por completo al cerrar sesión o reiniciar.";
+"error.trashFailed" = "No se ha podido trasladar el archivo plist a la Papelera (error de permisos o de disco); no se ha cambiado nada.";
+"error.fdaNeeded" = "No se puede leer la base de datos de ítems de inicio. Concede a Birth acceso total al disco en Ajustes del Sistema > Privacidad y seguridad.";
+"error.btmUnavailable" = "La base de datos de ítems de inicio de macOS no está disponible temporalmente.";
+"error.btmUnsupported" = "Esta versión de macOS usa un formato de base de datos de ítems de inicio que Birth aún no admite.";
+"error.btmAccount" = "Birth no ha podido asociar la base de datos de ítems de inicio a la cuenta actual de macOS.";
+"error.automationDenied" = "Birth no tiene permiso para controlar “System Events”. Permite Birth en Ajustes del Sistema > Privacidad y seguridad > Automatización.";
+"error.timeout" = "%1$@ no ha terminado en %2$lld segundos y se ha forzado su finalización.";

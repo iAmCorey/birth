@@ -62,6 +62,12 @@ System Settings won't tell you where the plist lives, which executable it points
 
 Missing permissions degrade gracefully: one-time setup guidance in the app, an automatic refresh when you come back from System Settings, and silence from then on.
 
+## Languages
+
+Birth is available in English, Deutsch, Español, Français, 日本語 and 简体中文. It follows your macOS language automatically and falls back to English for any other language. To override it, open **Birth → Settings… (⌘,)** and pick a language; Birth restarts to apply it.
+
+Translations live in `Sources/BirthUI/Resources/<lang>.lproj` and `Sources/BirthCore/Resources/<lang>.lproj`. To add a language, copy the `en.lproj` tables, translate them, and add a case to `AppState.AppLanguage`; the localization tests check that every table has the same keys and format specifiers.
+
 ## Install
 
 Requires macOS 14 (Sonoma) or later. Primarily developed and tested on macOS 26; if you hit problems on earlier versions, please file an [issue](https://github.com/iAmCorey/birth/issues).

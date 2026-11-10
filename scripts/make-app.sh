@@ -72,6 +72,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <array>
         <string>en</string>
         <string>de</string>
+        <string>es</string>
+        <string>fr</string>
+        <string>ja</string>
         <string>zh-Hans</string>
     </array>
 </dict>
@@ -80,13 +83,23 @@ PLIST
 
 # Declare every localization so framework-provided strings (menu bar,
 # standard dialog buttons) follow the app's language.
-mkdir -p "$APP/Contents/Resources/en.lproj" "$APP/Contents/Resources/de.lproj" \
-    "$APP/Contents/Resources/zh-Hans.lproj"
+for lang in en de es fr ja zh-Hans; do
+    mkdir -p "$APP/Contents/Resources/$lang.lproj"
+done
 
 # TCC usage strings follow the app language too; the English original
 # lives in Info.plist itself (the development-region fallback).
 cat > "$APP/Contents/Resources/de.lproj/InfoPlist.strings" <<'STRINGS'
 "NSAppleEventsUsageDescription" = "Birth muss „System Events“ steuern, um Apps hinzuzufügen und zu entfernen, die bei der Anmeldung geöffnet werden.";
+STRINGS
+cat > "$APP/Contents/Resources/es.lproj/InfoPlist.strings" <<'STRINGS'
+"NSAppleEventsUsageDescription" = "Birth necesita controlar Eventos del Sistema para añadir y eliminar las apps que se abren al iniciar sesión.";
+STRINGS
+cat > "$APP/Contents/Resources/fr.lproj/InfoPlist.strings" <<'STRINGS'
+"NSAppleEventsUsageDescription" = "Birth doit contrôler Événements Système pour ajouter et supprimer les apps ouvertes à l’ouverture de session.";
+STRINGS
+cat > "$APP/Contents/Resources/ja.lproj/InfoPlist.strings" <<'STRINGS'
+"NSAppleEventsUsageDescription" = "Birth はログイン時に開く App を追加・削除するために「システムイベント」を制御する必要があります。";
 STRINGS
 cat > "$APP/Contents/Resources/zh-Hans.lproj/InfoPlist.strings" <<'STRINGS'
 "NSAppleEventsUsageDescription" = "Birth 需要通过“系统事件”来添加和移除登录时打开的 App。";

@@ -151,3 +151,6 @@
 "badge.masqueradeHelp" = "标识符声称属于 Apple（com.apple.*），但签名验证不符——这是恶意软件常用的伪装手法。实际签名：%@";
 "badge.untrustedHelp" = "此可执行文件没有可识别的开发者签名";
 "settings.relaunchFailed" = "无法启动新实例，请手动重新打开 Birth。";
+"about.copyright" = "© %1$@ %2$@。保留所有权利。";
+"about.builtBy" = "用 ❤️ 打造，作者 ";
+"settings.language" = "语言";

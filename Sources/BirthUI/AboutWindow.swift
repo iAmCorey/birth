@@ -27,11 +27,11 @@ struct AboutView: View {
                 .fill(.quaternary)
                 .frame(width: 32, height: 1)
                 .padding(.vertical, 16)
-            Text("© \(BirthInfo.copyrightYear) \(BirthInfo.name). All rights reserved.")
+            Text(L("about.copyright", BirthInfo.copyrightYear, BirthInfo.name))
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(.tertiary)
             HStack(spacing: 0) {
-                Text("Built with ❤️ by ")
+                Text(L("about.builtBy"))
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(.tertiary)
                 aboutLink(BirthInfo.author, url: BirthInfo.authorURL, font: .system(size: 9, design: .monospaced))

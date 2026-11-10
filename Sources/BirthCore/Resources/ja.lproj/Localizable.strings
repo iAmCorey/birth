@@ -1,0 +1,20 @@
+/* BirthCore — 日本語. Keys are semantic; keep in lockstep with en. */
+
+"core.enable" = "有効に";
+"core.disable" = "無効に";
+"prompt.setEnabled" = "Birthが起動項目「%2$@」を%1$@しようとしています。";
+"prompt.remove" = "Birthが起動項目「%@」を削除しようとしています。";
+"error.authCanceled" = "管理者認証がキャンセルされました。";
+"error.launchctlFailed" = "launchctl %1$@ に失敗しました: %2$@";
+"error.disabledStillRunning" = "無効にしましたが、ジョブのプロセスはまだ実行中です。ログアウトまたは再起動すると完全に停止します。";
+"error.persistFailed" = "オン/オフの状態を保存できませんでした。何も変更されていません。";
+"error.loginItemsManaged" = "ログイン項目はmacOSによって管理されています。「システム設定」>「一般」>「ログイン項目と機能拡張」で変更してください。";
+"error.itemManaged" = "この項目はmacOSによって管理されています。「システム設定」>「一般」>「ログイン項目と機能拡張」で変更してください。";
+"error.removedStillRunning" = "削除しましたが、ジョブのプロセスはまだ実行中です。ログアウトまたは再起動すると完全に停止します。";
+"error.trashFailed" = "plistファイルをゴミ箱に移動できませんでした（権限またはディスクのエラー）。何も変更されていません。";
+"error.fdaNeeded" = "ログイン項目データベースを読み込めません。「システム設定」>「プライバシーとセキュリティ」で、Birthにフルディスクアクセスを許可してください。";
+"error.btmUnavailable" = "macOSのログイン項目データベースは一時的に利用できません。";
+"error.btmUnsupported" = "このバージョンのmacOSは、Birthがまだ対応していないログイン項目データベース形式を使用しています。";
+"error.btmAccount" = "Birthは、ログイン項目データベースを現在のmacOSアカウントと照合できませんでした。";
+"error.automationDenied" = "BirthにはSystem Eventsを制御する権限がありません。「システム設定」>「プライバシーとセキュリティ」>「オートメーション」でBirthを許可してください。";
+"error.timeout" = "%1$@ が%2$lld秒以内に完了しなかったため、強制終了しました。";

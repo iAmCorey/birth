@@ -11,7 +11,7 @@ import Testing
 @Suite("Core localization tables")
 struct CoreLocalizationTests {
     @Test func tablesStayInLockstep() throws {
-        let languages = ["en", "de", "zh-Hans"]
+        let languages = ["en", "de", "es", "fr", "ja", "zh-Hans"]
         var tables: [String: [String: String]] = [:]
         for language in languages {
             let path = try #require(Bundle.module.path(

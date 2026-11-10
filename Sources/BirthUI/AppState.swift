@@ -110,6 +110,9 @@ final class AppState {
         case chinese = "zh-Hans"
         case english = "en"
         case german = "de"
+        case french = "fr"
+        case spanish = "es"
+        case japanese = "ja"
 
         static func stored(in defaults: UserDefaults) -> AppLanguage {
             defaults.string(forKey: "birthLanguage").flatMap(AppLanguage.init(rawValue:)) ?? .system
@@ -209,7 +212,7 @@ final class AppState {
             case .system:
                 defaults.removeObject(forKey: "birthLanguage")
                 defaults.removeObject(forKey: "AppleLanguages")
-            case .chinese, .english, .german:
+            default:
                 defaults.set(appLanguage.rawValue, forKey: "birthLanguage")
                 defaults.set([appLanguage.rawValue], forKey: "AppleLanguages")
             }
