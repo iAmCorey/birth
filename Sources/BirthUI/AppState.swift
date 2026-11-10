@@ -109,6 +109,7 @@ final class AppState {
         case system
         case chinese = "zh-Hans"
         case english = "en"
+        case german = "de"
 
         static func stored(in defaults: UserDefaults) -> AppLanguage {
             defaults.string(forKey: "birthLanguage").flatMap(AppLanguage.init(rawValue:)) ?? .system
@@ -208,7 +209,7 @@ final class AppState {
             case .system:
                 defaults.removeObject(forKey: "birthLanguage")
                 defaults.removeObject(forKey: "AppleLanguages")
-            case .chinese, .english:
+            case .chinese, .english, .german:
                 defaults.set(appLanguage.rawValue, forKey: "birthLanguage")
                 defaults.set([appLanguage.rawValue], forKey: "AppleLanguages")
             }
@@ -228,7 +229,7 @@ final class AppState {
     /// process's locale is frozen at launch, and a plain lookup falls
     /// through to whatever per-app override is being edited. Hand-rolled
     /// prefix matching would diverge from the app's real resolution
-    /// (zh-Hant, fr, ja...) — unmatched systems land on Chinese, the
+    /// (zh-Hant, fr, ja...) — unmatched systems land on English, the
     /// package's defaultLocalization.
     var resolvedSystemLanguage: AppLanguage {
         let global = UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain)
@@ -237,12 +238,12 @@ final class AppState {
         // The dev region rides at the END of the preference list: the API
         // alone answers "en" for a fr/ja system (bare-array fallback), but
         // at launch CFBundle falls back to CFBundleDevelopmentRegion
-        // (zh-Hans) — appending it reproduces the launch behavior, while
+        // (en) — appending it reproduces the launch behavior, while
         // any genuine match (zh-Hant systems carry en-TW) still wins first.
         let best = Bundle.preferredLocalizations(
-            from: available, forPreferences: preferences + [AppLanguage.chinese.rawValue]
+            from: available, forPreferences: preferences + [AppLanguage.english.rawValue]
         ).first
-        return best.flatMap(AppLanguage.init(rawValue:)) ?? .chinese
+        return best.flatMap(AppLanguage.init(rawValue:)) ?? .english
     }
 
     /// Spawn a fresh instance (which reads the new AppleLanguages) and

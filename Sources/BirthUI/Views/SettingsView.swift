@@ -14,12 +14,13 @@ struct SettingsView: View {
                     Text(L("settings.followSystem")).tag(AppState.AppLanguage.system)
                     Text(verbatim: "简体中文").tag(AppState.AppLanguage.chinese)
                     Text(verbatim: "English").tag(AppState.AppLanguage.english)
+                    Text(verbatim: "Deutsch").tag(AppState.AppLanguage.german)
                 } label: {
                     // Bilingual on purpose — the language row must be
                     // readable no matter which language is showing. Plain
                     // SF Symbol, matching the main window's icon language.
                     Label {
-                        Text(verbatim: "Language / 语言")
+                        Text(verbatim: "Language / Sprache / 语言")
                     } icon: {
                         Image(systemName: "globe")
                     }
@@ -49,21 +50,23 @@ struct SettingsView: View {
     /// it in the language they are leaving is exactly wrong for the reader
     /// who can't read it. Deliberately NOT L() — these two strings are
     /// hardcoded per target instead of table-looked-up by current locale.
-    private var targetIsEnglish: Bool {
-        switch state.appLanguage {
-        case .english: true
-        case .chinese: false
-        case .system: state.resolvedSystemLanguage == .english
-        }
+    private var targetLanguage: AppState.AppLanguage {
+        state.appLanguage == .system ? state.resolvedSystemLanguage : state.appLanguage
     }
 
     private var relaunchNotice: String {
-        targetIsEnglish
-            ? "The language change takes effect after Birth restarts."
-            : "语言切换将在重启 Birth 后生效。"
+        switch targetLanguage {
+        case .chinese: "语言切换将在重启 Birth 后生效。"
+        case .german: "Die Sprachänderung wird nach einem Neustart von Birth wirksam."
+        case .english, .system: "The language change takes effect after Birth restarts."
+        }
     }
 
     private var relaunchButtonTitle: String {
-        targetIsEnglish ? "Restart Now" : "立即重启"
+        switch targetLanguage {
+        case .chinese: "立即重启"
+        case .german: "Jetzt neu starten"
+        case .english, .system: "Restart Now"
+        }
     }
 }

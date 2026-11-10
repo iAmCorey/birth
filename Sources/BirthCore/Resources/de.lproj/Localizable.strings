@@ -1,0 +1,20 @@
+/* BirthCore — Deutsch. Keys are semantic; keep in lockstep with en. */
+
+"core.enable" = "aktivieren";
+"core.disable" = "deaktivieren";
+"prompt.setEnabled" = "Birth möchte das Startobjekt „%2$@“ %1$@.";
+"prompt.remove" = "Birth möchte das Startobjekt „%@“ entfernen.";
+"error.authCanceled" = "Die Administrator-Autorisierung wurde abgebrochen.";
+"error.launchctlFailed" = "launchctl %1$@ fehlgeschlagen: %2$@";
+"error.disabledStillRunning" = "Deaktiviert, aber der Prozess läuft noch; er wird nach dem Abmelden oder Neustart vollständig beendet.";
+"error.persistFailed" = "Der dauerhafte Ein/Aus-Status konnte nicht gespeichert werden; es wurde nichts geändert.";
+"error.loginItemsManaged" = "Anmeldeobjekte werden von macOS verwaltet. Ändere sie unter Systemeinstellungen > Allgemein > Anmeldeobjekte & Erweiterungen.";
+"error.itemManaged" = "Dieses Objekt wird von macOS verwaltet. Ändere es unter Systemeinstellungen > Allgemein > Anmeldeobjekte & Erweiterungen.";
+"error.removedStillRunning" = "Entfernt, aber der Prozess läuft noch; er wird nach dem Abmelden oder Neustart vollständig beendet.";
+"error.trashFailed" = "Die plist-Datei konnte nicht in den Papierkorb gelegt werden (Berechtigungs- oder Festplattenfehler); es wurde nichts geändert.";
+"error.fdaNeeded" = "Die Datenbank der Anmeldeobjekte kann nicht gelesen werden. Erteile Birth Festplattenvollzugriff unter Systemeinstellungen > Datenschutz & Sicherheit.";
+"error.btmUnavailable" = "Die macOS-Datenbank der Anmeldeobjekte ist vorübergehend nicht verfügbar.";
+"error.btmUnsupported" = "Diese macOS-Version verwendet ein Format der Anmeldeobjekt-Datenbank, das Birth noch nicht unterstützt.";
+"error.btmAccount" = "Birth konnte die Anmeldeobjekt-Datenbank nicht dem aktuellen macOS-Benutzer zuordnen.";
+"error.automationDenied" = "Birth darf „System Events“ nicht steuern. Erlaube Birth unter Systemeinstellungen > Datenschutz & Sicherheit > Automation.";
+"error.timeout" = "%1$@ wurde nicht innerhalb von %2$lld Sekunden beendet und wurde zwangsweise abgebrochen.";
